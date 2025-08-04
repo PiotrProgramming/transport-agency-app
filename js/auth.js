@@ -153,7 +153,7 @@ function handleRegistration() {
         });
 }
 
-// Verify GitHub token permissions
+// Verify GitHub token permissions - CORRECTED VERSION
 function verifyGitHubTokenPermissions(token) {
     return fetch('https://api.github.com/user', {
         headers: {
@@ -162,25 +162,30 @@ function verifyGitHubTokenPermissions(token) {
         }
     })
     .then(response => {
+        // First check if the response is OK
         if (!response.ok) {
-            if (response.status === 401) {
-                return response.json().then(data => {
-                    throw new Error(data.message || 'Invalid GitHub token');
+            return response.json()
+                .then(data => {
+                    throw new Error(data.message || `GitHub API error: ${response.status}`);
+                })
+                .catch(() => {
+                    throw new Error(`GitHub API error: ${response.status}`);
                 });
-            }
-            throw new Error(`GitHub API error: ${response.status}`);
         }
-        return response.json();
-    })
-    .then(data => {
-        appState.githubUsername = data.login;
+        
+        // Get the scopes from the response headers
+        const scopes = response.headers.get('X-OAuth-Scopes') || '';
         
         // Check if token has repo scope
-        const scopes = response.headers.get('X-OAuth-Scopes') || '';
         if (!scopes.includes('repo')) {
             throw new Error('GitHub token missing "repo" permission. This is required for the application to work.');
         }
         
+        // Return the user data
+        return response.json();
+    })
+    .then(data => {
+        appState.githubUsername = data.login;
         return data;
     });
 }
@@ -195,7 +200,13 @@ function getGitHubUsername(token) {
     })
     .then(response => {
         if (!response.ok) {
-            throw new Error('Invalid GitHub token');
+            return response.json()
+                .then(data => {
+                    throw new Error(data.message || 'Invalid GitHub token');
+                })
+                .catch(() => {
+                    throw new Error('Invalid GitHub token');
+                });
         }
         return response.json();
     })
@@ -221,15 +232,25 @@ function verifyRepositoryAccess(repo) {
     })
     .then(response => {
         if (!response.ok) {
-            if (response.status === 404) {
-                return Promise.reject(new Error(`Repository "${owner}/${repoName}" not found`));
-            }
-            if (response.status === 403) {
-                return Promise.reject(new Error(`Access denied to repository "${owner}/${repoName}"`));
-            }
-            return response.json().then(data => {
-                throw new Error(data.message || 'Repository access verification failed');
-            });
+            return response.json()
+                .then(data => {
+                    if (response.status === 404) {
+                        throw new Error(`Repository "${owner}/${repoName}" not found`);
+                    }
+                    if (response.status === 403) {
+                        throw new Error(`Access denied to repository "${owner}/${repoName}"`);
+                    }
+                    throw new Error(data.message || 'Repository access verification failed');
+                })
+                .catch(() => {
+                    if (response.status === 404) {
+                        throw new Error(`Repository "${owner}/${repoName}" not found`);
+                    }
+                    if (response.status === 403) {
+                        throw new Error(`Access denied to repository "${owner}/${repoName}"`);
+                    }
+                    throw new Error('Repository access verification failed');
+                });
         }
         return response.json();
     });
@@ -258,14 +279,13 @@ function createRepository(username, repoName) {
     })
     .then(response => {
         if (!response.ok) {
-            if (response.status === 422) {
-                return response.json().then(data => {
-                    throw new Error(data.errors?.[0]?.message || 'Repository name is invalid');
+            return response.json()
+                .then(data => {
+                    throw new Error(data.message || 'Failed to create repository');
+                })
+                .catch(() => {
+                    throw new Error('Failed to create repository');
                 });
-            }
-            return response.json().then(data => {
-                throw new Error(data.message || 'Failed to create repository');
-            });
         }
         return response.json();
     });
@@ -304,12 +324,12 @@ function createInitialDataFiles(owner, repo) {
         }],
         statuses: [
             { module: 'drivers', name: 'Available', color: '#38a169' },
-            { module: 'drivers', name: 'On Duty', color: '##dd6b20' },
+            { module: 'drivers', name: 'On Duty', color: '#dd6b20' },
             { module: 'drivers', name: 'Maintenance', color: '#c53030' },
             { module: 'tenders', name: 'Unassigned', color: '#718096' },
             { module: 'tenders', name: 'Pending', color: '#dd6b20' },
             { module: 'tenders', name: 'Delivered', color: '#3182ce' },
-            { scope: 'tenders', name: 'Cancelled', color: '#c53030' },
+            { module: 'tenders', name: 'Cancelled', color: '#c53030' },
             { module: 'tenders', name: 'Sold', color: '#38a169' },
             { module: 'invoices', name: 'Pending', color: '#dd6b20' },
             { module: 'invoices', name: 'Paid', color: '#38a169' },
@@ -347,11 +367,15 @@ function createFile(owner, repo, filePath, content, message) {
             content: encodedContent
         })
     })
-    .then(async response => {
+    .then(response => {
         if (!response.ok) {
-            const errorData = await response.json().catch(() => null);
-            const errorMsg = errorData?.message || response.statusText;
-            throw new Error(`Failed to create ${filePath}: ${errorMsg}`);
+            return response.json()
+                .then(data => {
+                    throw new Error(`Failed to create ${filePath}: ${data.message || response.statusText}`);
+                })
+                .catch(() => {
+                    throw new Error(`Failed to create ${filePath}: ${response.statusText}`);
+                });
         }
         return response.json();
     });
