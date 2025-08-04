@@ -1,5 +1,10 @@
 // Initialize notifications
 function initNotifications() {
+    // Ensure appState.notifications is initialized
+    if (!appState.notifications) {
+        appState.notifications = [];
+    }
+    
     // In a real implementation, we would set up event listeners for notification actions
     setupNotificationActions();
     
@@ -22,6 +27,11 @@ function setupNotificationActions() {
 
 // Check for new notifications
 function checkForNotifications() {
+    // Ensure appState.notifications is initialized
+    if (!appState.notifications) {
+        appState.notifications = [];
+    }
+    
     // In a real implementation, we would check GitHub for new notifications
     // For demo purposes, we'll simulate some notifications
     
@@ -59,6 +69,11 @@ function checkForNotifications() {
 
 // Add a new notification
 function addNotification(notification) {
+    // Ensure appState.notifications is initialized
+    if (!appState.notifications) {
+        appState.notifications = [];
+    }
+    
     // Don't add duplicate notifications
     const exists = appState.notifications.some(n => 
         n.title === notification.title && n.description === notification.description);
@@ -77,6 +92,11 @@ function addNotification(notification) {
 
 // Update notification UI
 function updateNotificationUI() {
+    // Ensure appState.notifications is initialized
+    if (!appState.notifications) {
+        appState.notifications = [];
+    }
+    
     const notificationDropdown = document.getElementById('notification-dropdown');
     if (!notificationDropdown) return;
     
@@ -110,6 +130,11 @@ function updateNotificationUI() {
 
 // Mark notification as read
 function markNotificationAsRead(id) {
+    // Ensure appState.notifications is initialized
+    if (!appState.notifications) {
+        appState.notifications = [];
+    }
+    
     // Update state
     appState.notifications = appState.notifications.map(n => 
         n.id === id ? { ...n, read: true } : n);
