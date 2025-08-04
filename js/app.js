@@ -6,6 +6,7 @@ const appState = {
     token: null,
     repo: null,
     githubUsername: null,
+    notifications: [], // Initialize notifications array here
     githubApi: {
         baseUrl: 'https://api.github.com',
         headers: {
@@ -28,6 +29,11 @@ const logoutBtn = document.getElementById('logout-btn');
 
 // Initialize the application
 function initApp() {
+    // Make sure notifications array is initialized
+    if (!appState.notifications) {
+        appState.notifications = [];
+    }
+    
     // Check if user is already authenticated
     checkAuthStatus();
     
@@ -79,6 +85,11 @@ function initApp() {
 
 // Check authentication status
 function checkAuthStatus() {
+    // Make sure notifications array is initialized
+    if (!appState.notifications) {
+        appState.notifications = [];
+    }
+    
     // In a real implementation, we would check for stored credentials
     // For now, we'll just check if the user has logged in during this session
     if (appState.isAuthenticated) {
@@ -93,6 +104,11 @@ function checkAuthStatus() {
 
 // Load initial data after login
 function loadInitialData() {
+    // Make sure notifications array is initialized
+    if (!appState.notifications) {
+        appState.notifications = [];
+    }
+    
     // Set current repository in admin view
     if (appState.repo) {
         const repoInput = document.getElementById('current-repo');
@@ -108,6 +124,11 @@ function loadInitialData() {
 
 // Load data for the current view
 function loadViewData(view) {
+    // Make sure notifications array is initialized
+    if (!appState.notifications) {
+        appState.notifications = [];
+    }
+    
     switch(view) {
         case 'dashboard':
             if (typeof loadDashboardData === 'function') {
@@ -159,6 +180,11 @@ function loadViewData(view) {
 
 // Load notifications
 function loadNotifications() {
+    // Ensure notifications array is initialized
+    if (!appState.notifications) {
+        appState.notifications = [];
+    }
+    
     const notificationList = document.getElementById('notification-dropdown');
     if (!notificationList) return;
     
@@ -202,6 +228,11 @@ function loadNotifications() {
 
 // Mark notification as read
 function markNotificationAsRead(id) {
+    // Ensure notifications array is initialized
+    if (!appState.notifications) {
+        appState.notifications = [];
+    }
+    
     const notificationItem = document.querySelector(`.notification-item:nth-child(${id + 1})`);
     if (notificationItem) {
         notificationItem.style.backgroundColor = '#f7fafc';
