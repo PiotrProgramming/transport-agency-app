@@ -5,7 +5,7 @@ const appState = {
     currentUser: null,
     token: null,
     repo: null,
-    notifications: [],
+    githubUsername: null,
     githubApi: {
         baseUrl: 'https://api.github.com',
         headers: {
@@ -48,8 +48,9 @@ function initApp() {
             // Show selected view
             document.getElementById(`${view}-view`).classList.add('active');
             
-            // Load view-specific data
-            loadViewData(view);
+            // Dispatch event for view change
+            const event = new CustomEvent('viewchange', { detail: view });
+            document.dispatchEvent(event);
         });
     });
 
@@ -109,31 +110,49 @@ function loadInitialData() {
 function loadViewData(view) {
     switch(view) {
         case 'dashboard':
-            loadDashboardData();
+            if (typeof loadDashboardData === 'function') {
+                loadDashboardData();
+            }
             break;
         case 'drivers':
-            loadDriversData();
+            if (typeof loadDriversData === 'function') {
+                loadDriversData();
+            }
             break;
         case 'cars':
-            loadCarsData();
+            if (typeof loadCarsData === 'function') {
+                loadCarsData();
+            }
             break;
         case 'cards':
-            loadCardsData();
+            if (typeof loadCardsData === 'function') {
+                loadCardsData();
+            }
             break;
         case 'tenders':
-            loadTendersData();
+            if (typeof loadTendersData === 'function') {
+                loadTendersData();
+            }
             break;
         case 'invoices':
-            loadInvoicesData();
+            if (typeof loadInvoicesData === 'function') {
+                loadInvoicesData();
+            }
             break;
         case 'reports':
-            loadReportsData();
+            if (typeof loadReportsData === 'function') {
+                loadReportsData();
+            }
             break;
         case 'admin':
-            loadAdminData();
+            if (typeof loadAdminData === 'function') {
+                loadAdminData();
+            }
             break;
         case 'chat':
-            loadChatData();
+            if (typeof loadChatData === 'function') {
+                loadChatData();
+            }
             break;
     }
 }
