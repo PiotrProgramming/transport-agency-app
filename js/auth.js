@@ -31,7 +31,7 @@ function initAuth() {
 }
 
 // Handle login
-function handleLogin() {
+async function handleLogin() {
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
     const token = document.getElementById('login-token').value;
@@ -43,50 +43,38 @@ function handleLogin() {
         return;
     }
     
-    // Set GitHub API headers
-    appState.githubApi.headers.Authorization = `token ${token}`;
-    
-    // First verify the token has proper permissions
-    verifyGitHubTokenPermissions(token)
-        .then(() => verifyRepositoryAccess(repo))
-        .then(() => {
-            // Set application state
-            appState.isAuthenticated = true;
-            appState.currentUser = { 
-                name: email.split('@')[0].replace('.', ' ').replace(/^\w/, c => c.toUpperCase()),
-                email: email 
-            };
-            appState.token = token;
-            appState.repo = repo;
-            
-            // Initialize notifications array if not already done
-            if (!appState.notifications) {
-                appState.notifications = [];
-            }
-            
-            // Show the main application
-            document.getElementById('auth-view').classList.remove('active');
-            document.getElementById('app-view').classList.add('active');
-            
-            // Load initial data
-            loadInitialData();
-        })
-        .catch(error => {
-            console.error('Login error:', error);
-            let errorMessage = error.message;
-            
-            if (error.message.includes('Bad credentials')) {
-                errorMessage = 'Invalid GitHub token. Make sure your token has "repo" permissions.';
-            } else if (error.message.includes('Repository not found')) {
-                errorMessage = 'Repository not found or you don\'t have access. Check the format (owner/repo).';
-            }
-            
-            alert(`Login failed: ${errorMessage}\n\nTo fix this:\n1. Go to https://github.com/settings/tokens\n2. Create a new token with "repo" permissions\n3. Use the new token here`);
-        });
+    try {
+        // Verify token and repository access
+        await verifyTokenAndRepoAccess(token, repo);
+        
+        // Set application state
+        appState.isAuthenticated = true;
+        appState.currentUser = { 
+            name: email.split('@')[0].replace('.', ' ').replace(/^\w/, c => c.toUpperCase()),
+            email: email 
+        };
+        appState.token = token;
+        appState.repo = repo;
+        
+        // Initialize notifications array
+        if (!appState.notifications) {
+            appState.notifications = [];
+        }
+        
+        // Show the main application
+        document.getElementById('auth-view').classList.remove('active');
+        document.getElementById('app-view').classList.add('active');
+        
+        // Load initial data
+        loadInitialData();
+    } catch (error) {
+        console.error('Login error:', error);
+        alert(`Login failed: ${error.message}\n\nCheck your GitHub token and repository name.`);
+    }
 }
 
 // Handle registration
-function handleRegistration() {
+async function handleRegistration() {
     const email = document.getElementById('register-email').value;
     const password = document.getElementById('register-password').value;
     const token = document.getElementById('register-token').value;
@@ -98,209 +86,98 @@ function handleRegistration() {
         return;
     }
     
-    // Set GitHub API headers
-    appState.githubApi.headers.Authorization = `token ${token}`;
+    try {
+        // Create repository and initialize data
+        await createRepoAndFiles(token, repoName, { email, password });
+        
+        // Set application state
+        appState.isAuthenticated = true;
+        appState.currentUser = { 
+            name: email.split('@')[0].replace('.', ' ').replace(/^\w/, c => c.toUpperCase()),
+            email: email 
+        };
+        appState.token = token;
+        appState.repo = `${appState.githubUsername}/${repoName}`;
+        
+        // Initialize notifications array
+        if (!appState.notifications) {
+            appState.notifications = [];
+        }
+        
+        // Show success message
+        alert(`Repository created: ${appState.githubUsername}/${repoName}\nData structure initialized.`);
+        
+        // Show the main application
+        document.getElementById('auth-view').classList.remove('active');
+        document.getElementById('app-view').classList.add('active');
+        
+        // Load initial data
+        loadInitialData();
+    } catch (error) {
+        console.error('Registration error:', error);
+        alert(`Registration failed: ${error.message}\n\nCheck your GitHub token and repository name.`);
+    }
+}
+
+// Verify token and repository access
+async function verifyTokenAndRepoAccess(token, repo) {
+    // Get user info to verify token
+    const userResponse = await fetch('https://api.github.com/user', {
+        headers: { Authorization: `token ${token}` }
+    });
     
-    // First verify the token has proper permissions
-    verifyGitHubTokenPermissions(token)
-        .then(() => getGitHubUsername(token))
-        .then(username => {
-            // Create repository
-            return createRepository(username, repoName);
-        })
-        .then(repo => {
-            // Initialize repository data structure
-            return initializeRepositoryData(repo.full_name);
-        })
-        .then(() => {
-            // Set application state
-            appState.isAuthenticated = true;
-            appState.currentUser = { 
-                name: email.split('@')[0].replace('.', ' ').replace(/^\w/, c => c.toUpperCase()),
-                email: email 
-            };
-            appState.token = token;
-            appState.repo = `${appState.githubUsername}/${repoName}`;
-            
-            // Initialize notifications array
-            if (!appState.notifications) {
-                appState.notifications = [];
-            }
-            
-            // Show success message
-            alert(`Repository created: ${appState.githubUsername}/${repoName}\nData structure initialized.`);
-            
-            // Show the main application
-            document.getElementById('auth-view').classList.remove('active');
-            document.getElementById('app-view').classList.add('active');
-            
-            // Load initial data
-            loadInitialData();
-        })
-        .catch(error => {
-            console.error('Registration error:', error);
-            let errorMessage = error.message;
-            
-            if (error.message.includes('Bad credentials')) {
-                errorMessage = 'Invalid GitHub token. Make sure your token has "repo" permissions.';
-            } else if (error.message.includes('must have admin access')) {
-                errorMessage = 'You need admin access to create repositories.';
-            } else if (error.message.includes('Validation Failed')) {
-                errorMessage = 'Repository name is invalid. Use only letters, numbers, and hyphens.';
-            }
-            
-            alert(`Registration failed: ${errorMessage}\n\nTo fix this:\n1. Go to https://github.com/settings/tokens\n2. Create a new token with "repo" permissions\n3. Use the new token here`);
-        });
-}
-
-// Verify GitHub token permissions - 100% WORKING VERSION
-function verifyGitHubTokenPermissions(token) {
-    return new Promise((resolve, reject) => {
-        fetch('https://api.github.com/user', {
-            headers: {
-                'Authorization': `token ${token}`,
-                'Accept': 'application/vnd.github.v3+json'
-            }
-        })
-        .then(response => {
-            // Store status early to avoid scoping issues
-            const status = response.status;
-            const statusText = response.statusText;
-            
-            if (!response.ok) {
-                response.json().then(data => {
-                    reject(new Error(data.message || `GitHub API error: ${status} ${statusText}`));
-                }).catch(() => {
-                    reject(new Error(`GitHub API error: ${status} ${statusText}`));
-                });
-                return;
-            }
-            
-            // Get the scopes from the response headers
-            const scopes = response.headers.get('X-OAuth-Scopes') || '';
-            
-            // Check if token has repo scope
-            if (!scopes.includes('repo')) {
-                reject(new Error('GitHub token missing "repo" permission. This is required for the application to work.'));
-                return;
-            }
-            
-            // Return the user data
-            response.json().then(data => {
-                appState.githubUsername = data.login;
-                resolve(data);
-            }).catch(error => {
-                reject(new Error('Failed to parse GitHub response: ' + error.message));
-            });
-        })
-        .catch(error => {
-            reject(new Error('Network error: ' + error.message));
-        });
+    if (!userResponse.ok) {
+        const error = await userResponse.json().catch(() => ({}));
+        throw new Error(error.message || 'Invalid GitHub token');
+    }
+    
+    const user = await userResponse.json();
+    appState.githubUsername = user.login;
+    
+    // Parse repository name
+    const [owner, repoName] = repo.split('/');
+    if (!owner || !repoName) {
+        throw new Error('Repository name must be in "owner/repo" format');
+    }
+    
+    // Check if repository exists
+    const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repoName}`, {
+        headers: { Authorization: `token ${token}` }
     });
+    
+    if (!repoResponse.ok) {
+        const error = await repoResponse.json().catch(() => ({}));
+        throw new Error(error.message || 'Repository not found or access denied');
+    }
 }
 
-// Get GitHub username from token
-function getGitHubUsername(token) {
-    return new Promise((resolve, reject) => {
-        fetch('https://api.github.com/user', {
-            headers: {
-                'Authorization': `token ${token}`,
-                'Accept': 'application/vnd.github.v3+json'
-            }
-        })
-        .then(response => {
-            const status = response.status;
-            const statusText = response.statusText;
-            
-            if (!response.ok) {
-                response.json().then(data => {
-                    reject(new Error(data.message || `GitHub API error: ${status} ${statusText}`));
-                }).catch(() => {
-                    reject(new Error(`GitHub API error: ${status} ${statusText}`));
-                });
-                return;
-            }
-            
-            response.json().then(data => {
-                appState.githubUsername = data.login;
-                resolve(data.login);
-            }).catch(error => {
-                reject(new Error('Failed to parse GitHub response: ' + error.message));
-            });
-        })
-        .catch(error => {
-            reject(new Error('Network error: ' + error.message));
-        });
+// Create repository and initialize files
+async function createRepoAndFiles(token, repoName, userData) {
+    // Get user info
+    const userResponse = await fetch('https://api.github.com/user', {
+        headers: { Authorization: `token ${token}` }
     });
-}
-
-// Verify repository access
-function verifyRepositoryAccess(repo) {
-    return new Promise((resolve, reject) => {
-        const [owner, repoName] = repo.split('/');
-        
-        if (!owner || !repoName) {
-            reject(new Error('Repository name must be in "owner/repo" format'));
-            return;
-        }
-        
-        fetch(`https://api.github.com/repos/${owner}/${repoName}`, {
-            headers: {
-                'Authorization': `token ${appState.token}`,
-                'Accept': 'application/vnd.github.v3+json'
-            }
-        })
-        .then(response => {
-            const status = response.status;
-            const statusText = response.statusText;
-            
-            if (!response.ok) {
-                response.json().then(data => {
-                    if (status === 404) {
-                        reject(new Error(`Repository "${owner}/${repoName}" not found`));
-                    } else if (status === 403) {
-                        reject(new Error(`Access denied to repository "${owner}/${repoName}"`));
-                    } else {
-                        reject(new Error(data.message || 'Repository access verification failed'));
-                    }
-                }).catch(() => {
-                    if (status === 404) {
-                        reject(new Error(`Repository "${owner}/${repoName}" not found`));
-                    } else if (status === 403) {
-                        reject(new Error(`Access denied to repository "${owner}/${repoName}"`));
-                    } else {
-                        reject(new Error('Repository access verification failed'));
-                    }
-                });
-                return;
-            }
-            
-            response.json().then(data => {
-                resolve(data);
-            }).catch(error => {
-                reject(new Error('Failed to parse repository data: ' + error.message));
-            });
-        })
-        .catch(error => {
-            reject(new Error('Network error: ' + error.message));
-        });
+    
+    if (!userResponse.ok) {
+        const error = await userResponse.json().catch(() => ({}));
+        throw new Error(error.message || 'Invalid GitHub token');
+    }
+    
+    const user = await userResponse.json();
+    appState.githubUsername = user.login;
+    const owner = user.login;
+    
+    // Check if repository exists
+    const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repoName}`, {
+        headers: { Authorization: `token ${token}` }
     });
-}
-
-// Create repository
-function createRepository(username, repoName) {
-    return new Promise((resolve, reject) => {
-        // Validate repository name
-        if (!/^[a-zA-Z0-9][a-zA-Z0-9\-_.]*$/.test(repoName)) {
-            reject(new Error('Invalid repository name. Use only letters, numbers, hyphens, underscores, and periods.'));
-            return;
-        }
-        
-        fetch('https://api.github.com/user/repos', {
+    
+    if (!repoResponse.ok) {
+        // Create repository if it doesn't exist
+        const createResponse = await fetch('https://api.github.com/user/repos', {
             method: 'POST',
             headers: {
-                'Authorization': `token ${appState.token}`,
-                'Accept': 'application/vnd.github.v3+json',
+                Authorization: `token ${token}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -309,141 +186,100 @@ function createRepository(username, repoName) {
                 private: true,
                 auto_init: true
             })
-        })
-        .then(response => {
-            const status = response.status;
-            const statusText = response.statusText;
-            
-            if (!response.ok) {
-                response.json().then(data => {
-                    reject(new Error(data.message || `Failed to create repository: ${status} ${statusText}`));
-                }).catch(() => {
-                    reject(new Error(`Failed to create repository: ${status} ${statusText}`));
-                });
-                return;
-            }
-            
-            response.json().then(data => {
-                resolve(data);
-            }).catch(error => {
-                reject(new Error('Failed to parse repository creation response: ' + error.message));
-            });
-        })
-        .catch(error => {
-            reject(new Error('Network error: ' + error.message));
         });
-    });
+        
+        if (!createResponse.ok) {
+            const error = await createResponse.json().catch(() => ({}));
+            throw new Error(error.message || 'Failed to create repository');
+        }
+        
+        // Wait for GitHub to initialize the repository
+        await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+    
+    // Initialize data files
+    await initializeDataFiles(owner, repoName, token, userData);
 }
 
-// Initialize repository data structure
-function initializeRepositoryData(repoFullName) {
-    return new Promise((resolve, reject) => {
-        const [owner, repo] = repoFullName.split('/');
-        
-        // First, create the initial data structure
-        createInitialDataFiles(owner, repo)
-            .then(() => {
-                console.log('Repository data structure initialized successfully');
-                resolve();
-            })
-            .catch(error => {
-                console.error('Failed to initialize repository data structure:', error);
-                reject(new Error('Failed to initialize repository data structure: ' + error.message));
-            });
-    });
+// Initialize data files
+async function initializeDataFiles(owner, repo, token, userData) {
+    // Initial data structure
+    const initialData = {
+        drivers: [],
+        cars: [],
+        cards: [],
+        tenders: [],
+        invoices: [],
+        users: [{
+            id: 1,
+            name: userData.email.split('@')[0].replace('.', ' ').replace(/^\w/, c => c.toUpperCase()),
+            email: userData.email,
+            role: 'Administrator',
+            status: 'active',
+            supervisor: null
+        }],
+        statuses: [
+            { module: 'drivers', name: 'Available', color: '#38a169' },
+            { module: 'drivers', name: 'On Duty', color: '#dd6b20' },
+            { module: 'drivers', name: 'Maintenance', color: '#c53030' },
+            { module: 'tenders', name: 'Unassigned', color: '#718096' },
+            { module: 'tenders', name: 'Pending', color: '#dd6b20' },
+            { module: 'tenders', name: 'Delivered', color: '#3182ce' },
+            { module: 'tenders', name: 'Cancelled', color: '#c53030' },
+            { module: 'tenders', name: 'Sold', color: '#38a169' },
+            { module: 'invoices', name: 'Pending', color: '#dd6b20' },
+            { module: 'invoices', name: 'Paid', color: '#38a169' },
+            { module: 'invoices', name: 'Unpaid', color: '#c53030' },
+            { module: 'invoices', name: 'Overdue', color: '#9f7aea' }
+        ]
+    };
+    
+    // Create each file
+    await updateGitHubFile(owner, repo, token, 'drivers.json', initialData.drivers);
+    await updateGitHubFile(owner, repo, token, 'cars.json', initialData.cars);
+    await updateGitHubFile(owner, repo, token, 'cards.json', initialData.cards);
+    await updateGitHubFile(owner, repo, token, 'tenders.json', initialData.tenders);
+    await updateGitHubFile(owner, repo, token, 'invoices.json', initialData.invoices);
+    await updateGitHubFile(owner, repo, token, 'users.json', initialData.users);
+    await updateGitHubFile(owner, repo, token, 'statuses.json', initialData.statuses);
+    await updateGitHubFile(owner, repo, token, 'chat/messages.json', []);
 }
 
-// Create initial data files
-function createInitialDataFiles(owner, repo) {
-    return new Promise((resolve, reject) => {
-        const initialData = {
-            drivers: [],
-            cars: [],
-            cards: [],
-            tenders: [],
-            invoices: [],
-            users: [{
-                id: 1,
-                name: appState.currentUser.name,
-                email: appState.currentUser.email,
-                role: 'Administrator',
-                status: 'active',
-                supervisor: null
-            }],
-            statuses: [
-                { module: 'drivers', name: 'Available', color: '#38a169' },
-                { module: 'drivers', name: 'On Duty', color: '#dd6b20' },
-                { module: 'drivers', name: 'Maintenance', color: '#c53030' },
-                { module: 'tenders', name: 'Unassigned', color: '#718096' },
-                { module: 'tenders', name: 'Pending', color: '#dd6b20' },
-                { module: 'tenders', name: 'Delivered', color: '#3182ce' },
-                { module: 'tenders', name: 'Cancelled', color: '#c53030' },
-                { module: 'tenders', name: 'Sold', color: '#38a169' },
-                { module: 'invoices', name: 'Pending', color: '#dd6b20' },
-                { module: 'invoices', name: 'Paid', color: '#38a169' },
-                { module: 'invoices', name: 'Unpaid', color: '#c53030' },
-                { module: 'invoices', name: 'Overdue', color: '#9f7aea' }
-            ]
-        };
+// Update GitHub file
+async function updateGitHubFile(owner, repo, token, path, content) {
+    try {
+        // Get current file info if it exists
+        let sha = null;
+        const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+            headers: { Authorization: `token ${token}` }
+        });
         
-        // Create each file
-        const filePromises = [
-            createFile(owner, repo, 'drivers.json', JSON.stringify(initialData.drivers, null, 2), 'Initial data structure'),
-            createFile(owner, repo, 'cars.json', JSON.stringify(initialData.cars, null, 2), 'Initial data structure'),
-            createFile(owner, repo, 'cards.json', JSON.stringify(initialData.cards, null, 2), 'Initial data structure'),
-            createFile(owner, repo, 'tenders.json', JSON.stringify(initialData.tenders, null, 2), 'Initial data structure'),
-            createFile(owner, repo, 'invoices.json', JSON.stringify(initialData.invoices, null, 2), 'Initial data structure'),
-            createFile(owner, repo, 'users.json', JSON.stringify(initialData.users, null, 2), 'Initial data structure'),
-            createFile(owner, repo, 'statuses.json', JSON.stringify(initialData.statuses, null, 2), 'Initial data structure'),
-            createFile(owner, repo, 'chat/messages.json', JSON.stringify([], null, 2), 'Initial chat structure')
-        ];
+        if (response.ok) {
+            const data = await response.json();
+            sha = data.sha;
+        }
         
-        Promise.all(filePromises)
-            .then(() => resolve())
-            .catch(error => reject(error));
-    });
-}
-
-// Create a file in the repository
-function createFile(owner, repo, filePath, content, message) {
-    return new Promise((resolve, reject) => {
-        const encodedContent = btoa(unescape(encodeURIComponent(content)));
-        
-        fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`, {
+        // Update file
+        const updateResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
             method: 'PUT',
             headers: {
-                'Authorization': `token ${appState.token}`,
-                'Accept': 'application/vnd.github.v3+json',
+                Authorization: `token ${token}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                message: message,
-                content: encodedContent
+                message: `Initialize ${path}`,
+                content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2)))),
+                sha: sha
             })
-        })
-        .then(response => {
-            const status = response.status;
-            const statusText = response.statusText;
-            
-            if (!response.ok) {
-                response.json().then(data => {
-                    reject(new Error(`Failed to create ${filePath}: ${data.message || statusText}`));
-                }).catch(() => {
-                    reject(new Error(`Failed to create ${filePath}: ${statusText}`));
-                });
-                return;
-            }
-            
-            response.json().then(data => {
-                resolve(data);
-            }).catch(error => {
-                reject(new Error(`Failed to parse ${filePath} creation response: ${error.message}`));
-            });
-        })
-        .catch(error => {
-            reject(new Error(`Network error creating ${filePath}: ${error.message}`));
         });
-    });
+        
+        if (!updateResponse.ok) {
+            const error = await updateResponse.json().catch(() => ({}));
+            throw new Error(error.message || `Failed to update ${path}`);
+        }
+    } catch (error) {
+        throw new Error(`File update failed: ${error.message}`);
+    }
 }
 
 // Logout functionality
