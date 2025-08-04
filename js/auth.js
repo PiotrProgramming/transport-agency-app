@@ -43,27 +43,33 @@ function handleLogin() {
         return;
     }
     
-    // In a real implementation, we would verify with GitHub API
-    // For now, we'll simulate a successful login
-    
-    // Set application state
-    appState.isAuthenticated = true;
-    appState.currentUser = { 
-        name: email.split('@')[0].replace('.', ' ').replace(/^\w/, c => c.toUpperCase()),
-        email: email 
-    };
-    appState.token = token;
-    appState.repo = repo;
-    
     // Set GitHub API headers
     appState.githubApi.headers.Authorization = `token ${token}`;
     
-    // Show the main application
-    document.getElementById('auth-view').classList.remove('active');
-    document.getElementById('app-view').classList.add('active');
-    
-    // Load initial data
-    loadInitialData();
+    // Verify GitHub token and repository access
+    verifyGitHubToken(token)
+        .then(() => verifyRepositoryAccess(repo))
+        .then(() => {
+            // Set application state
+            appState.isAuthenticated = true;
+            appState.currentUser = { 
+                name: email.split('@')[0].replace('.', ' ').replace(/^\w/, c => c.toUpperCase()),
+                email: email 
+            };
+            appState.token = token;
+            appState.repo = repo;
+            
+            // Show the main application
+            document.getElementById('auth-view').classList.remove('active');
+            document.getElementById('app-view').classList.add('active');
+            
+            // Load initial data
+            loadInitialData();
+        })
+        .catch(error => {
+            console.error('Login error:', error);
+            alert(`Login failed: ${error.message}`);
+        });
 }
 
 // Handle registration
@@ -71,73 +77,156 @@ function handleRegistration() {
     const email = document.getElementById('register-email').value;
     const password = document.getElementById('register-password').value;
     const token = document.getElementById('register-token').value;
-    const repo = document.getElementById('register-repo').value;
+    const repoName = document.getElementById('register-repo').value;
     
     // Basic validation
-    if (!email || !password || !token || !repo) {
+    if (!email || !password || !token || !repoName) {
         alert('Please fill in all fields');
         return;
     }
     
-    // In a real implementation, we would:
-    // 1. Verify GitHub token
-    // 2. Create repository via GitHub API
-    // 3. Initialize data structure in the repository
-    
-    // For demo purposes, we'll simulate repository creation
-    const owner = email.split('@')[0];
-    const repoName = repo;
-    
-    // Set application state
-    appState.isAuthenticated = true;
-    appState.currentUser = { 
-        name: email.split('@')[0].replace('.', ' ').replace(/^\w/, c => c.toUpperCase()),
-        email: email 
-    };
-    appState.token = token;
-    appState.repo = `${owner}/${repoName}`;
-    
     // Set GitHub API headers
     appState.githubApi.headers.Authorization = `token ${token}`;
     
-    // Show success message
-    alert(`Repository created: ${owner}/${repoName}\nData structure initialized.`);
+    // Get GitHub username from token
+    getGitHubUsername(token)
+        .then(username => {
+            // Create repository
+            return createRepository(username, repoName);
+        })
+        .then(repo => {
+            // Initialize repository data structure
+            return initializeRepositoryData(repo.full_name);
+        })
+        .then(() => {
+            // Set application state
+            appState.isAuthenticated = true;
+            appState.currentUser = { 
+                name: email.split('@')[0].replace('.', ' ').replace(/^\w/, c => c.toUpperCase()),
+                email: email 
+            };
+            appState.token = token;
+            appState.repo = `${appState.githubUsername}/${repoName}`;
+            
+            // Show success message
+            alert(`Repository created: ${appState.githubUsername}/${repoName}\nData structure initialized.`);
+            
+            // Show the main application
+            document.getElementById('auth-view').classList.remove('active');
+            document.getElementById('app-view').classList.add('active');
+            
+            // Load initial data
+            loadInitialData();
+        })
+        .catch(error => {
+            console.error('Registration error:', error);
+            alert(`Registration failed: ${error.message}`);
+        });
+}
+
+// Get GitHub username from token
+function getGitHubUsername(token) {
+    return fetch('https://api.github.com/user', {
+        headers: {
+            'Authorization': `token ${token}`,
+            'Accept': 'application/vnd.github.v3+json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Invalid GitHub token');
+        }
+        return response.json();
+    })
+    .then(data => {
+        appState.githubUsername = data.login;
+        return data.login;
+    });
+}
+
+// Verify GitHub token
+function verifyGitHubToken(token) {
+    return fetch('https://api.github.com/user', {
+        headers: {
+            'Authorization': `token ${token}`,
+            'Accept': 'application/vnd.github.v3+json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Invalid GitHub token');
+        }
+        return response.json();
+    })
+    .then(data => {
+        appState.githubUsername = data.login;
+    });
+}
+
+// Verify repository access
+function verifyRepositoryAccess(repo) {
+    const [owner, repoName] = repo.split('/');
     
-    // Show the main application
-    document.getElementById('auth-view').classList.remove('active');
-    document.getElementById('app-view').classList.add('active');
-    
-    // Load initial data
-    loadInitialData();
-    
-    // Initialize repository data
-    initializeRepositoryData();
+    return fetch(`https://api.github.com/repos/${owner}/${repoName}`, {
+        headers: {
+            'Authorization': `token ${appState.token}`,
+            'Accept': 'application/vnd.github.v3+json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Repository not found or access denied');
+        }
+        return response.json();
+    });
+}
+
+// Create repository
+function createRepository(username, repoName) {
+    return fetch('https://api.github.com/user/repos', {
+        method: 'POST',
+        headers: {
+            'Authorization': `token ${appState.token}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            name: repoName,
+            description: 'Transport and Forwarding Agency Data Repository',
+            private: true,
+            auto_init: true
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            if (response.status === 422) {
+                throw new Error(`Repository "${repoName}" already exists`);
+            }
+            return response.json().then(data => {
+                throw new Error(data.message || 'Failed to create repository');
+            });
+        }
+        return response.json();
+    });
 }
 
 // Initialize repository data structure
-function initializeRepositoryData() {
-    // In a real implementation, we would create these files via GitHub API
-    const dataStructure = [
-        'drivers.json',
-        'cars.json',
-        'cards.json',
-        'tenders.json',
-        'invoices.json',
-        'users.json',
-        'statuses.json',
-        'chat/',
-        'chat/messages.json'
-    ];
+function initializeRepositoryData(repoFullName) {
+    const [owner, repo] = repoFullName.split('/');
     
-    console.log('Initializing repository data structure:', dataStructure);
-    
-    // Create initial data files
-    createInitialDataFiles();
+    // First, create the initial data structure
+    return createInitialDataFiles(owner, repo)
+        .then(() => {
+            console.log('Repository data structure initialized successfully');
+        })
+        .catch(error => {
+            console.error('Failed to initialize repository data:', error);
+            throw new Error('Failed to initialize repository data structure');
+        });
 }
 
 // Create initial data files
-function createInitialDataFiles() {
-    // In a real implementation, we would use GitHub API to create these files
+function createInitialDataFiles(owner, repo) {
     const initialData = {
         drivers: [],
         cars: [],
@@ -168,7 +257,43 @@ function createInitialDataFiles() {
         ]
     };
     
-    console.log('Created initial data files with sample structure');
+    // Create each file
+    return Promise.all([
+        createFile(owner, repo, 'drivers.json', JSON.stringify(initialData.drivers, null, 2), 'Initial data structure'),
+        createFile(owner, repo, 'cars.json', JSON.stringify(initialData.cars, null, 2), 'Initial data structure'),
+        createFile(owner, repo, 'cards.json', JSON.stringify(initialData.cards, null, 2), 'Initial data structure'),
+        createFile(owner, repo, 'tenders.json', JSON.stringify(initialData.tenders, null, 2), 'Initial data structure'),
+        createFile(owner, repo, 'invoices.json', JSON.stringify(initialData.invoices, null, 2), 'Initial data structure'),
+        createFile(owner, repo, 'users.json', JSON.stringify(initialData.users, null, 2), 'Initial data structure'),
+        createFile(owner, repo, 'statuses.json', JSON.stringify(initialData.statuses, null, 2), 'Initial data structure'),
+        createFile(owner, repo, 'chat/messages.json', JSON.stringify([], null, 2), 'Initial chat structure')
+    ]);
+}
+
+// Create a file in the repository
+function createFile(owner, repo, filePath, content, message) {
+    const encodedContent = btoa(unescape(encodeURIComponent(content)));
+    
+    return fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `token ${appState.token}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            message: message,
+            content: encodedContent
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.message || `Failed to create ${filePath}`);
+            });
+        }
+        return response.json();
+    });
 }
 
 // Logout functionality
@@ -177,6 +302,7 @@ function handleLogout() {
     appState.currentUser = null;
     appState.token = null;
     appState.repo = null;
+    appState.githubUsername = null;
     
     // Clear GitHub API headers
     appState.githubApi.headers.Authorization = '';
