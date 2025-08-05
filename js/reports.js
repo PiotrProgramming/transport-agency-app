@@ -1,18 +1,30 @@
-// DOM Elements
-let generateReportBtn;
-
 // Initialize reports
 function initReports() {
-    generateReportBtn = document.getElementById('generate-report-btn');
+    console.log('Initializing reports view');
     
-    // Set up event listeners
-    if (generateReportBtn) {
+    // Register this view's initializer with the app state
+    appState.registerViewInitializer('reports', function() {
+        console.log('Reports view initialized');
+    });
+    
+    // Register this view's data loader with the app state
+    appState.registerViewLoader('reports', function() {
+        console.log('Reports view data loader called');
+        loadReportsData();
+    });
+    
+    // Set up event listeners for the generate report button
+    const generateReportBtn = document.getElementById('generate-report-btn');
+    if (generateReportBtn && !generateReportBtn.dataset.initialized) {
         generateReportBtn.addEventListener('click', generateReport);
+        generateReportBtn.dataset.initialized = 'true';
     }
 }
 
 // Load reports data
 function loadReportsData() {
+    console.log('Loading reports data');
+    
     // Update dashboard metrics
     updateDashboardMetrics();
     
@@ -47,21 +59,38 @@ function updateDashboardMetrics() {
     };
     
     // Update UI
-    document.getElementById('revenue-value').textContent = metrics.revenue.value;
-    document.getElementById('revenue-change').textContent = metrics.revenue.change;
-    document.getElementById('revenue-change').className = metrics.revenue.positive ? 'card-change positive' : 'card-change negative';
+    const revenueValue = document.getElementById('revenue-value');
+    const revenueChange = document.getElementById('revenue-change');
+    const loadCapacityValue = document.getElementById('load-capacity-value');
+    const loadCapacityChange = document.getElementById('load-capacity-change');
+    const deliveryRateValue = document.getElementById('delivery-rate-value');
+    const deliveryRateChange = document.getElementById('delivery-rate-change');
+    const utilizationValue = document.getElementById('utilization-value');
+    const utilizationChange = document.getElementById('utilization-change');
     
-    document.getElementById('load-capacity-value').textContent = metrics.loadCapacity.value;
-    document.getElementById('load-capacity-change').textContent = metrics.loadCapacity.change;
-    document.getElementById('load-capacity-change').className = metrics.loadCapacity.positive ? 'card-change positive' : 'card-change negative';
+    if (revenueValue) revenueValue.textContent = metrics.revenue.value;
+    if (revenueChange) {
+        revenueChange.textContent = metrics.revenue.change;
+        revenueChange.className = metrics.revenue.positive ? 'card-change positive' : 'card-change negative';
+    }
     
-    document.getElementById('delivery-rate-value').textContent = metrics.deliveryRate.value;
-    document.getElementById('delivery-rate-change').textContent = metrics.deliveryRate.change;
-    document.getElementById('delivery-rate-change').className = metrics.deliveryRate.positive ? 'card-change positive' : 'card-change negative';
+    if (loadCapacityValue) loadCapacityValue.textContent = metrics.loadCapacity.value;
+    if (loadCapacityChange) {
+        loadCapacityChange.textContent = metrics.loadCapacity.change;
+        loadCapacityChange.className = metrics.loadCapacity.positive ? 'card-change positive' : 'card-change negative';
+    }
     
-    document.getElementById('utilization-value').textContent = metrics.utilization.value;
-    document.getElementById('utilization-change').textContent = metrics.utilization.change;
-    document.getElementById('utilization-change').className = metrics.utilization.positive ? 'card-change positive' : 'card-change negative';
+    if (deliveryRateValue) deliveryRateValue.textContent = metrics.deliveryRate.value;
+    if (deliveryRateChange) {
+        deliveryRateChange.textContent = metrics.deliveryRate.change;
+        deliveryRateChange.className = metrics.deliveryRate.positive ? 'card-change positive' : 'card-change negative';
+    }
+    
+    if (utilizationValue) utilizationValue.textContent = metrics.utilization.value;
+    if (utilizationChange) {
+        utilizationChange.textContent = metrics.utilization.change;
+        utilizationChange.className = metrics.utilization.positive ? 'card-change positive' : 'card-change negative';
+    }
 }
 
 // Load driver performance data
