@@ -6,7 +6,7 @@ const appState = {
     token: null,
     repo: null,
     githubUsername: null,
-    notifications: [], // Initialize notifications array here
+    notifications: [],
     githubApi: {
         baseUrl: 'https://api.github.com',
         headers: {
@@ -14,7 +14,8 @@ const appState = {
             'Accept': 'application/vnd.github.v3+json',
             'Content-Type': 'application/json'
         }
-    }
+    },
+    viewInitializers: {} // Store view initialization functions
 };
 
 // DOM Elements
@@ -26,6 +27,11 @@ const notificationDropdown = document.getElementById('notification-dropdown');
 const userProfile = document.getElementById('user-profile');
 const userDropdown = document.getElementById('user-dropdown');
 const logoutBtn = document.getElementById('logout-btn');
+
+// Register a view initializer
+appState.registerViewInitializer = function(viewName, initializer) {
+    this.viewInitializers[viewName] = initializer;
+};
 
 // Initialize the application
 function initApp() {
@@ -40,23 +46,8 @@ function initApp() {
     // Navigation
     navItems.forEach(item => {
         item.addEventListener('click', () => {
-            navItems.forEach(i => i.classList.remove('active'));
-            item.classList.add('active');
-            
             const view = item.getAttribute('data-view');
-            appState.currentView = view;
-            
-            // Hide all views
-            document.querySelectorAll('.view').forEach(v => {
-                v.classList.remove('active');
-            });
-            
-            // Show selected view
-            document.getElementById(`${view}-view`).classList.add('active');
-            
-            // Dispatch event for view change
-            const event = new CustomEvent('viewchange', { detail: view });
-            document.dispatchEvent(event);
+            activateView(view);
         });
     });
 
@@ -83,6 +74,37 @@ function initApp() {
     });
 }
 
+// Activate a view
+function activateView(view) {
+    // Update navigation highlights
+    navItems.forEach(i => i.classList.remove('active'));
+    const activeNavItem = document.querySelector(`.nav-item[data-view="${view}"]`);
+    if (activeNavItem) activeNavItem.classList.add('active');
+    
+    // Hide all views
+    document.querySelectorAll('.view').forEach(v => {
+        v.classList.remove('active');
+    });
+    
+    // Show selected view
+    const viewElement = document.getElementById(`${view}-view`);
+    if (viewElement) {
+        viewElement.classList.add('active');
+        appState.currentView = view;
+        
+        // Initialize the view if we have an initializer
+        if (appState.viewInitializers[view]) {
+            appState.viewInitializers[view]();
+        } else {
+            console.log(`No initializer registered for view: ${view}`);
+            // Try to load data directly if available
+            loadViewData(view);
+        }
+    } else {
+        console.error(`View element not found: ${view}-view`);
+    }
+}
+
 // Check authentication status
 function checkAuthStatus() {
     // Make sure notifications array is initialized
@@ -91,11 +113,10 @@ function checkAuthStatus() {
     }
     
     // In a real implementation, we would check for stored credentials
-    // For now, we'll just check if the user has logged in during this session
     if (appState.isAuthenticated) {
         authView.classList.remove('active');
-        appView.classList.add('active');
-        loadInitialData();
+        appState.currentView = 'dashboard'; // Default view
+        activateView('dashboard');
     } else {
         authView.classList.add('active');
         appView.classList.remove('active');
@@ -104,11 +125,6 @@ function checkAuthStatus() {
 
 // Load initial data after login
 function loadInitialData() {
-    // Make sure notifications array is initialized
-    if (!appState.notifications) {
-        appState.notifications = [];
-    }
-    
     // Set current repository in admin view
     if (appState.repo) {
         const repoInput = document.getElementById('current-repo');
@@ -118,8 +134,8 @@ function loadInitialData() {
     // Load notifications
     loadNotifications();
     
-    // Load initial view data
-    loadViewData(appState.currentView);
+    // Activate the current view (which will load its data)
+    activateView(appState.currentView);
 }
 
 // Load data for the current view
@@ -129,15 +145,21 @@ function loadViewData(view) {
         appState.notifications = [];
     }
     
+    console.log(`Loading data for view: ${view}`);
+    
     switch(view) {
         case 'dashboard':
             if (typeof loadDashboardData === 'function') {
                 loadDashboardData();
+            } else {
+                console.warn('loadDashboardData function not available');
             }
             break;
         case 'drivers':
             if (typeof loadDriversData === 'function') {
                 loadDriversData();
+            } else {
+                console.warn('loadDriversData function not available');
             }
             break;
         case 'cars':
@@ -175,12 +197,14 @@ function loadViewData(view) {
                 loadChatData();
             }
             break;
+        default:
+            console.warn(`No data loader for view: ${view}`);
     }
 }
 
 // Load notifications
 function loadNotifications() {
-    // Ensure notifications array is initialized
+    // Ensure appState.notifications is initialized
     if (!appState.notifications) {
         appState.notifications = [];
     }
@@ -188,12 +212,12 @@ function loadNotifications() {
     const notificationList = document.getElementById('notification-dropdown');
     if (!notificationList) return;
     
-    // Clear existing notifications
+    // Clear existing notifications except header
     while (notificationList.children.length > 1) {
         notificationList.removeChild(notificationList.lastChild);
     }
     
-    // Add sample notifications (in a real app, these would come from GitHub)
+    // Add sample notifications
     const sampleNotifications = [
         { id: 1, title: 'Driver License Expiring', time: '2 hours ago', read: false },
         { id: 2, title: 'Tender #TX-7890 Delivered', time: '5 hours ago', read: false },
