@@ -1,44 +1,44 @@
-// DOM Elements
-let chatUsersList;
-let chatMessages;
-let chatInput;
-let chatSendBtn;
-let chatCurrentUser;
-let chatCurrentRole;
-
-// Chat state
-const chatState = {
-    currentUserId: 1,
-    currentChatUserId: 2,
-    messages: []
-};
-
 // Initialize chat
 function initChat() {
-    chatUsersList = document.getElementById('chat-users-list');
-    chatMessages = document.getElementById('chat-messages');
-    chatInput = document.getElementById('chat-input');
-    chatSendBtn = document.getElementById('chat-send-btn');
-    chatCurrentUser = document.getElementById('chat-current-user');
-    chatCurrentRole = document.getElementById('chat-current-role');
+    console.log('Initializing chat view');
     
-    // Set up event listeners
-    if (chatSendBtn && chatInput) {
+    // Register this view's initializer with the app state
+    appState.registerViewInitializer('chat', function() {
+        console.log('Chat view initialized');
+    });
+    
+    // Register this view's data loader with the app state
+    appState.registerViewLoader('chat', function() {
+        console.log('Chat view data loader called');
+        loadChatData();
+    });
+    
+    // Set up event listeners for the send button
+    const chatSendBtn = document.getElementById('chat-send-btn');
+    const chatInput = document.getElementById('chat-input');
+    
+    if (chatSendBtn && chatInput && !chatSendBtn.dataset.initialized) {
         chatSendBtn.addEventListener('click', sendMessage);
         chatInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 sendMessage();
             }
         });
+        chatSendBtn.dataset.initialized = 'true';
     }
-    
-    // Load initial chat data
-    loadChatData();
 }
 
 // Load chat data
 function loadChatData() {
-    if (!chatUsersList) return;
+    console.log('Loading chat data');
+    
+    const chatUsersList = document.getElementById('chat-users-list');
+    const chatMessages = document.getElementById('chat-messages');
+    
+    if (!chatUsersList || !chatMessages) {
+        console.error('Chat elements not found');
+        return;
+    }
     
     // Clear existing content
     chatUsersList.innerHTML = '';
@@ -58,8 +58,11 @@ function loadChatData() {
     });
     
     // Set current user info
+    const chatCurrentUser = document.getElementById('chat-current-user');
+    const chatCurrentRole = document.getElementById('chat-current-role');
+    
     if (chatCurrentUser && chatCurrentRole) {
-        const currentUser = sampleUsers.find(u => u.id === chatState.currentUserId);
+        const currentUser = sampleUsers.find(u => u.id === 1);
         if (currentUser) {
             chatCurrentUser.textContent = currentUser.name;
             chatCurrentRole.textContent = currentUser.role;
@@ -67,9 +70,11 @@ function loadChatData() {
     }
     
     // Load messages for the first user
-    if (sampleUsers.length > 1) {
-        loadMessagesForUser(sampleUsers[1]);
+    if (sampleUsers.length > 0) {
+        loadMessagesForUser(sampleUsers[0]);
     }
+    
+    console.log(`Successfully loaded ${sampleUsers.length} chat users`);
 }
 
 // Render a single chat user
@@ -78,7 +83,7 @@ function renderChatUser(user) {
     userItem.className = 'user-item';
     userItem.dataset.id = user.id;
     
-    if (user.id === chatState.currentChatUserId) {
+    if (user.id === 1) {
         userItem.classList.add('active');
     }
     
@@ -109,7 +114,7 @@ function renderChatUser(user) {
         loadMessagesForUser(user);
     });
     
-    chatUsersList.appendChild(userItem);
+    document.getElementById('chat-users-list').appendChild(userItem);
 }
 
 // Load messages for a user
@@ -121,11 +126,16 @@ function loadMessagesForUser(user) {
     document.querySelector(`.user-item[data-id="${user.id}"]`).classList.add('active');
     
     // Update current chat user info
-    chatState.currentChatUserId = user.id;
-    chatCurrentUser.textContent = user.name;
-    chatCurrentRole.textContent = user.role;
+    const chatCurrentUser = document.getElementById('chat-current-user');
+    const chatCurrentRole = document.getElementById('chat-current-role');
+    
+    if (chatCurrentUser && chatCurrentRole) {
+        chatCurrentUser.textContent = user.name;
+        chatCurrentRole.textContent = user.role;
+    }
     
     // Clear existing messages
+    const chatMessages = document.getElementById('chat-messages');
     if (chatMessages) {
         chatMessages.innerHTML = '';
     }
@@ -162,9 +172,6 @@ function loadMessagesForUser(user) {
         }
     ];
     
-    // Save messages to state
-    chatState.messages = sampleMessages;
-    
     // Render messages
     sampleMessages.forEach(message => {
         renderMessage(message);
@@ -178,6 +185,7 @@ function loadMessagesForUser(user) {
 
 // Render a single message
 function renderMessage(message) {
+    const chatMessages = document.getElementById('chat-messages');
     if (!chatMessages) return;
     
     const messageDiv = document.createElement('div');
@@ -193,20 +201,25 @@ function renderMessage(message) {
 
 // Send a message
 function sendMessage() {
+    const chatInput = document.getElementById('chat-input');
+    const chatMessages = document.getElementById('chat-messages');
+    
+    if (!chatInput || !chatMessages) {
+        console.error('Chat input or messages element not found');
+        return;
+    }
+    
     const content = chatInput.value.trim();
     if (!content) return;
     
     // Create new message
     const newMessage = {
         id: Date.now(),
-        senderId: chatState.currentUserId,
+        senderId: 1,
         content: content,
         timestamp: formatTime(new Date()),
         type: 'sent'
     };
-    
-    // Add to state
-    chatState.messages.push(newMessage);
     
     // Render message
     renderMessage(newMessage);
@@ -217,8 +230,7 @@ function sendMessage() {
     // Scroll to bottom
     chatMessages.scrollTop = chatMessages.scrollHeight;
     
-    // In a real implementation, we would save this to GitHub
-    console.log('Message saved to GitHub:', newMessage);
+    console.log('Message sent:', newMessage);
 }
 
 // Format time as HH:MM AM/PM
