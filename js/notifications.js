@@ -1,5 +1,7 @@
 // Initialize notifications
 function initNotifications() {
+    console.log('Initializing notifications');
+    
     // Ensure appState.notifications is initialized
     if (!appState.notifications) {
         appState.notifications = [];
@@ -14,7 +16,6 @@ function initNotifications() {
 
 // Setup notification actions
 function setupNotificationActions() {
-    // In a real implementation, we would set up handlers for notification clicks
     document.addEventListener('click', (e) => {
         if (e.target.closest('.notification-item')) {
             const notificationId = e.target.closest('.notification-item').dataset.id;
@@ -27,6 +28,8 @@ function setupNotificationActions() {
 
 // Check for new notifications
 function checkForNotifications() {
+    console.log('Checking for notifications');
+    
     // Ensure appState.notifications is initialized
     if (!appState.notifications) {
         appState.notifications = [];
@@ -69,6 +72,8 @@ function checkForNotifications() {
 
 // Add a new notification
 function addNotification(notification) {
+    console.log('Adding notification:', notification);
+    
     // Ensure appState.notifications is initialized
     if (!appState.notifications) {
         appState.notifications = [];
@@ -92,6 +97,8 @@ function addNotification(notification) {
 
 // Update notification UI
 function updateNotificationUI() {
+    console.log('Updating notification UI');
+    
     // Ensure appState.notifications is initialized
     if (!appState.notifications) {
         appState.notifications = [];
@@ -117,6 +124,9 @@ function updateNotificationUI() {
             <div class="notification-title">${notification.title}</div>
             <div class="notification-time">${notification.time}</div>
         `;
+        notificationItem.addEventListener('click', () => {
+            markNotificationAsRead(notification.id);
+        });
         notificationDropdown.appendChild(notificationItem);
     });
     
@@ -130,17 +140,25 @@ function updateNotificationUI() {
 
 // Mark notification as read
 function markNotificationAsRead(id) {
-    // Ensure appState.notifications is initialized
+    console.log(`Marking notification as read: ${id}`);
+    
+    // Ensure notifications array is initialized
     if (!appState.notifications) {
         appState.notifications = [];
     }
     
-    // Update state
-    appState.notifications = appState.notifications.map(n => 
-        n.id === id ? { ...n, read: true } : n);
+    const notificationItem = document.querySelector(`.notification-item:nth-child(${id + 1})`);
+    if (notificationItem) {
+        notificationItem.style.backgroundColor = '#f7fafc';
+        notificationItem.style.fontWeight = 'normal';
+    }
     
-    // Update UI
-    updateNotificationUI();
+    // Update badge count
+    const unreadCount = appState.notifications.filter(n => !n.read).length - 1;
+    const badge = document.querySelector('.notification-badge');
+    if (badge) {
+        badge.textContent = unreadCount > 0 ? unreadCount : '';
+    }
 }
 
 // Initialize notifications when DOM is loaded
