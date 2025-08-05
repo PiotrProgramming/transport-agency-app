@@ -94,44 +94,37 @@ function activateView(view) {
         v.classList.remove('active');
     });
     
-    // Force reflow to ensure the transition works properly
-    void document.body.offsetWidth;
-    
     // Show selected view
     const viewElement = document.getElementById(`${view}-view`);
     if (viewElement) {
         appState.currentView = view;
         
-        // Set a small delay to ensure the view is properly hidden first
-        setTimeout(() => {
-            viewElement.classList.add('active');
-            
-            // Initialize the view if we have an initializer
-            if (appState.viewInitializers[view]) {
-                console.log(`Calling initializer for ${view}`);
-                try {
-                    appState.viewInitializers[view]();
-                } catch (error) {
-                    console.error(`Error in initializer for ${view}:`, error);
-                }
-            } else {
-                console.log(`No initializer registered for view: ${view}`);
+        // Show the view immediately (no transition delays)
+        viewElement.classList.add('active');
+        
+        // Initialize the view if we have an initializer
+        if (appState.viewInitializers[view]) {
+            console.log(`Calling initializer for ${view}`);
+            try {
+                appState.viewInitializers[view]();
+            } catch (error) {
+                console.error(`Error in initializer for ${view}:`, error);
             }
-            
-            // Load data for the view
-            setTimeout(() => {
-                if (appState.viewLoaders[view]) {
-                    console.log(`Calling loader for ${view}`);
-                    try {
-                        appState.viewLoaders[view]();
-                    } catch (error) {
-                        console.error(`Error loading data for ${view}:`, error);
-                    }
-                } else {
-                    console.log(`No loader registered for view: ${view}`);
-                }
-            }, 50);
-        }, 50);
+        } else {
+            console.log(`No initializer registered for view: ${view}`);
+        }
+        
+        // Load data for the view
+        if (appState.viewLoaders[view]) {
+            console.log(`Calling loader for ${view}`);
+            try {
+                appState.viewLoaders[view]();
+            } catch (error) {
+                console.error(`Error loading data for ${view}:`, error);
+            }
+        } else {
+            console.log(`No loader registered for view: ${view}`);
+        }
     } else {
         console.error(`View element not found: ${view}-view`);
     }
@@ -149,10 +142,8 @@ function checkAuthStatus() {
         authView.classList.remove('active');
         appView.classList.add('active');
         
-        // Set a small delay to ensure proper view transition
-        setTimeout(() => {
-            activateView(appState.currentView || 'dashboard');
-        }, 100);
+        // Activate the current view immediately
+        activateView(appState.currentView || 'dashboard');
     } else {
         authView.classList.add('active');
         appView.classList.remove('active');
@@ -174,91 +165,6 @@ function loadInitialData() {
     
     // Activate the current view (which will load its data)
     activateView(appState.currentView);
-}
-
-// Load data for the current view
-function loadViewData(view) {
-    console.log(`Loading data for view: ${view}`);
-    
-    // Make sure notifications array is initialized
-    if (!appState.notifications) {
-        appState.notifications = [];
-    }
-    
-    // Try to call the registered loader
-    if (appState.viewLoaders[view]) {
-        appState.viewLoaders[view]();
-        return;
-    }
-    
-    // Fallback to direct loading
-    switch(view) {
-        case 'dashboard':
-            if (typeof loadDashboardData === 'function') {
-                loadDashboardData();
-            } else {
-                console.warn('loadDashboardData function not available');
-            }
-            break;
-        case 'drivers':
-            if (typeof loadDriversData === 'function') {
-                loadDriversData();
-            } else {
-                console.warn('loadDriversData function not available');
-            }
-            break;
-        case 'cars':
-            if (typeof loadCarsData === 'function') {
-                loadCarsData();
-            } else {
-                console.warn('loadCarsData function not available');
-            }
-            break;
-        case 'cards':
-            if (typeof loadCardsData === 'function') {
-                loadCardsData();
-            } else {
-                console.warn('loadCardsData function not available');
-            }
-            break;
-        case 'tenders':
-            if (typeof loadTendersData === 'function') {
-                loadTendersData();
-            } else {
-                console.warn('loadTendersData function not available');
-            }
-            break;
-        case 'invoices':
-            if (typeof loadInvoicesData === 'function') {
-                loadInvoicesData();
-            } else {
-                console.warn('loadInvoicesData function not available');
-            }
-            break;
-        case 'reports':
-            if (typeof loadReportsData === 'function') {
-                loadReportsData();
-            } else {
-                console.warn('loadReportsData function not available');
-            }
-            break;
-        case 'admin':
-            if (typeof loadAdminData === 'function') {
-                loadAdminData();
-            } else {
-                console.warn('loadAdminData function not available');
-            }
-            break;
-        case 'chat':
-            if (typeof loadChatData === 'function') {
-                loadChatData();
-            } else {
-                console.warn('loadChatData function not available');
-            }
-            break;
-        default:
-            console.warn(`No data loader for view: ${view}`);
-    }
 }
 
 // Load notifications
