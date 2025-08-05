@@ -15,7 +15,8 @@ const appState = {
             'Content-Type': 'application/json'
         }
     },
-    viewInitializers: {} // Store view initialization functions
+    viewInitializers: {}, // Store view initialization functions
+    viewLoaders: {} // Store view data loading functions
 };
 
 // DOM Elements
@@ -31,6 +32,11 @@ const logoutBtn = document.getElementById('logout-btn');
 // Register a view initializer
 appState.registerViewInitializer = function(viewName, initializer) {
     this.viewInitializers[viewName] = initializer;
+};
+
+// Register a view data loader
+appState.registerViewLoader = function(viewName, loader) {
+    this.viewLoaders[viewName] = loader;
 };
 
 // Initialize the application
@@ -76,30 +82,46 @@ function initApp() {
 
 // Activate a view
 function activateView(view) {
+    console.log(`Activating view: ${view}`);
+    
     // Update navigation highlights
     navItems.forEach(i => i.classList.remove('active'));
     const activeNavItem = document.querySelector(`.nav-item[data-view="${view}"]`);
     if (activeNavItem) activeNavItem.classList.add('active');
     
-    // Hide all views
+    // Hide all views first
     document.querySelectorAll('.view').forEach(v => {
         v.classList.remove('active');
     });
     
+    // Force reflow to ensure the transition works properly
+    void document.body.offsetWidth;
+    
     // Show selected view
     const viewElement = document.getElementById(`${view}-view`);
     if (viewElement) {
-        viewElement.classList.add('active');
         appState.currentView = view;
         
-        // Initialize the view if we have an initializer
-        if (appState.viewInitializers[view]) {
-            appState.viewInitializers[view]();
-        } else {
-            console.log(`No initializer registered for view: ${view}`);
-            // Try to load data directly if available
-            loadViewData(view);
-        }
+        // Set a small delay to ensure the view is properly hidden first
+        setTimeout(() => {
+            viewElement.classList.add('active');
+            
+            // Initialize the view if we have an initializer
+            if (appState.viewInitializers[view]) {
+                console.log(`Calling initializer for ${view}`);
+                appState.viewInitializers[view]();
+            } else {
+                console.log(`No initializer registered for view: ${view}`);
+            }
+            
+            // Load data for the view
+            if (appState.viewLoaders[view]) {
+                console.log(`Calling loader for ${view}`);
+                appState.viewLoaders[view]();
+            } else {
+                console.log(`No loader registered for view: ${view}`);
+            }
+        }, 50);
     } else {
         console.error(`View element not found: ${view}-view`);
     }
@@ -115,8 +137,12 @@ function checkAuthStatus() {
     // In a real implementation, we would check for stored credentials
     if (appState.isAuthenticated) {
         authView.classList.remove('active');
-        appState.currentView = 'dashboard'; // Default view
-        activateView('dashboard');
+        appView.classList.add('active');
+        
+        // Set a small delay to ensure proper view transition
+        setTimeout(() => {
+            activateView(appState.currentView || 'dashboard');
+        }, 50);
     } else {
         authView.classList.add('active');
         appView.classList.remove('active');
@@ -125,6 +151,8 @@ function checkAuthStatus() {
 
 // Load initial data after login
 function loadInitialData() {
+    console.log('Loading initial data');
+    
     // Set current repository in admin view
     if (appState.repo) {
         const repoInput = document.getElementById('current-repo');
@@ -140,13 +168,20 @@ function loadInitialData() {
 
 // Load data for the current view
 function loadViewData(view) {
+    console.log(`Loading data for view: ${view}`);
+    
     // Make sure notifications array is initialized
     if (!appState.notifications) {
         appState.notifications = [];
     }
     
-    console.log(`Loading data for view: ${view}`);
+    // Try to call the registered loader
+    if (appState.viewLoaders[view]) {
+        appState.viewLoaders[view]();
+        return;
+    }
     
+    // Fallback to direct loading
     switch(view) {
         case 'dashboard':
             if (typeof loadDashboardData === 'function') {
@@ -165,36 +200,50 @@ function loadViewData(view) {
         case 'cars':
             if (typeof loadCarsData === 'function') {
                 loadCarsData();
+            } else {
+                console.warn('loadCarsData function not available');
             }
             break;
         case 'cards':
             if (typeof loadCardsData === 'function') {
                 loadCardsData();
+            } else {
+                console.warn('loadCardsData function not available');
             }
             break;
         case 'tenders':
             if (typeof loadTendersData === 'function') {
                 loadTendersData();
+            } else {
+                console.warn('loadTendersData function not available');
             }
             break;
         case 'invoices':
             if (typeof loadInvoicesData === 'function') {
                 loadInvoicesData();
+            } else {
+                console.warn('loadInvoicesData function not available');
             }
             break;
         case 'reports':
             if (typeof loadReportsData === 'function') {
                 loadReportsData();
+            } else {
+                console.warn('loadReportsData function not available');
             }
             break;
         case 'admin':
             if (typeof loadAdminData === 'function') {
                 loadAdminData();
+            } else {
+                console.warn('loadAdminData function not available');
             }
             break;
         case 'chat':
             if (typeof loadChatData === 'function') {
                 loadChatData();
+            } else {
+                console.warn('loadChatData function not available');
             }
             break;
         default:
@@ -204,13 +253,18 @@ function loadViewData(view) {
 
 // Load notifications
 function loadNotifications() {
+    console.log('Loading notifications');
+    
     // Ensure appState.notifications is initialized
     if (!appState.notifications) {
         appState.notifications = [];
     }
     
     const notificationList = document.getElementById('notification-dropdown');
-    if (!notificationList) return;
+    if (!notificationList) {
+        console.error('Notification dropdown not found');
+        return;
+    }
     
     // Clear existing notifications except header
     while (notificationList.children.length > 1) {
@@ -252,6 +306,8 @@ function loadNotifications() {
 
 // Mark notification as read
 function markNotificationAsRead(id) {
+    console.log(`Marking notification as read: ${id}`);
+    
     // Ensure notifications array is initialized
     if (!appState.notifications) {
         appState.notifications = [];
@@ -272,4 +328,12 @@ function markNotificationAsRead(id) {
 }
 
 // Initialize the app when DOM is loaded
-document.addEventListener('DOMContentLoaded', initApp);
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM fully loaded and parsed');
+    initApp();
+    
+    // If we're already authenticated, load initial data
+    if (appState.isAuthenticated) {
+        loadInitialData();
+    }
+});
