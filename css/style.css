@@ -32,12 +32,18 @@ body {
     padding: 0 20px;
 }
 
+/* FIX: Changed from display: none to visibility:hidden with height:0 */
 .view {
-    display: none;
+    visibility: hidden;
+    height: 0;
+    opacity: 0;
+    transition: all 0.3s ease;
 }
 
 .view.active {
-    display: block;
+    visibility: visible;
+    height: auto;
+    opacity: 1;
 }
 
 .btn {
