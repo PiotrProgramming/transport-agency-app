@@ -615,5 +615,25 @@
     <script src="js/admin.js"></script>
     <script src="js/chat.js"></script>
     <script src="js/notifications.js"></script>
+    
+    <!-- DEBUG SCRIPT - REMOVE IN PRODUCTION -->
+    <script>
+        // DEBUG: Check if HTML is actually loading
+        console.log('DEBUG: HTML structure loaded');
+        console.log('DEBUG: Checking if app-view exists:', document.getElementById('app-view') ? 'YES' : 'NO');
+        console.log('DEBUG: Checking if dashboard-view exists:', document.getElementById('dashboard-view') ? 'YES' : 'NO');
+        
+        // DEBUG: Force show the dashboard view
+        setTimeout(() => {
+            console.log('DEBUG: Forcing dashboard view to be visible');
+            const dashboardView = document.getElementById('dashboard-view');
+            if (dashboardView) {
+                dashboardView.style.display = 'block';
+                dashboardView.style.visibility = 'visible';
+                dashboardView.style.opacity = '1';
+                dashboardView.style.height = 'auto';
+            }
+        }, 1000);
+    </script>
 </body>
 </html>
