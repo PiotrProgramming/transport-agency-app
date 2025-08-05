@@ -1,32 +1,44 @@
-// DOM Elements
-let usersList;
-let addUserBtn;
-let addStatusBtn;
-let migrateRepoBtn;
-
 // Initialize admin
 function initAdmin() {
-    usersList = document.getElementById('users-list');
-    addUserBtn = document.getElementById('add-user-btn');
-    addStatusBtn = document.getElementById('add-status-btn');
-    migrateRepoBtn = document.getElementById('migrate-repo-btn');
+    console.log('Initializing admin view');
     
-    // Set up event listeners
-    if (addUserBtn) {
+    // Register this view's initializer with the app state
+    appState.registerViewInitializer('admin', function() {
+        console.log('Admin view initialized');
+    });
+    
+    // Register this view's data loader with the app state
+    appState.registerViewLoader('admin', function() {
+        console.log('Admin view data loader called');
+        loadAdminData();
+    });
+    
+    // Set up event listeners for the add user button
+    const addUserBtn = document.getElementById('add-user-btn');
+    if (addUserBtn && !addUserBtn.dataset.initialized) {
         addUserBtn.addEventListener('click', showAddUserForm);
+        addUserBtn.dataset.initialized = 'true';
     }
     
-    if (addStatusBtn) {
+    // Set up event listeners for the add status button
+    const addStatusBtn = document.getElementById('add-status-btn');
+    if (addStatusBtn && !addStatusBtn.dataset.initialized) {
         addStatusBtn.addEventListener('click', showAddStatusForm);
+        addStatusBtn.dataset.initialized = 'true';
     }
     
-    if (migrateRepoBtn) {
+    // Set up event listeners for the migrate repository button
+    const migrateRepoBtn = document.getElementById('migrate-repo-btn');
+    if (migrateRepoBtn && !migrateRepoBtn.dataset.initialized) {
         migrateRepoBtn.addEventListener('click', migrateRepository);
+        migrateRepoBtn.dataset.initialized = 'true';
     }
 }
 
 // Load admin data
 function loadAdminData() {
+    console.log('Loading admin data');
+    
     // Load user management data
     loadUsersData();
     
@@ -36,7 +48,11 @@ function loadAdminData() {
 
 // Load users data
 function loadUsersData() {
-    if (!usersList) return;
+    const usersList = document.getElementById('users-list');
+    if (!usersList) {
+        console.error('Users list element not found');
+        return;
+    }
     
     // Clear existing content
     usersList.innerHTML = '';
@@ -73,6 +89,8 @@ function loadUsersData() {
     sampleUsers.forEach(user => {
         renderUser(user);
     });
+    
+    console.log(`Successfully loaded ${sampleUsers.length} users`);
 }
 
 // Render a single user
@@ -121,7 +139,6 @@ function renderUser(user) {
 
 // Show add user form
 function showAddUserForm() {
-    // In a real implementation, this would show a modal form
     const name = prompt('Enter user name:');
     if (!name) return;
     
@@ -188,6 +205,8 @@ function loadStatusesData() {
     sampleStatuses.forEach(status => {
         renderStatus(status);
     });
+    
+    console.log(`Successfully loaded ${sampleStatuses.length} statuses`);
 }
 
 // Render a single status
@@ -220,7 +239,6 @@ function renderStatus(status) {
 
 // Show add status form
 function showAddStatusForm() {
-    // In a real implementation, this would show a modal form
     const module = prompt('Enter module (drivers, tenders, invoices, etc.):', 'drivers');
     if (!module) return;
     
