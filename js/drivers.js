@@ -1,27 +1,38 @@
-// DOM Elements
-let driversList;
-let addDriverBtn;
-
 // Initialize drivers management
 function initDrivers() {
-    driversList = document.getElementById('drivers-list');
-    addDriverBtn = document.getElementById('add-driver-btn');
+    console.log('Initializing drivers view');
     
-    // Set up event listeners
-    if (addDriverBtn) {
+    // Register this view's initializer with the app state
+    appState.registerViewInitializer('drivers', function() {
+        console.log('Drivers view activated - loading data');
+        loadDriversData();
+    });
+    
+    // Set up event listeners for the add driver button
+    // These need to be set up once, not on every view activation
+    const addDriverBtn = document.getElementById('add-driver-btn');
+    if (addDriverBtn && !addDriverBtn.dataset.initialized) {
         addDriverBtn.addEventListener('click', showAddDriverForm);
+        addDriverBtn.dataset.initialized = 'true';
     }
     
-    // Status filter
+    // Set up status filter
     const statusFilter = document.getElementById('drivers-status-filter');
-    if (statusFilter) {
+    if (statusFilter && !statusFilter.dataset.initialized) {
         statusFilter.addEventListener('change', filterDrivers);
+        statusFilter.dataset.initialized = 'true';
     }
 }
 
 // Load drivers data
 function loadDriversData() {
-    if (!driversList) return;
+    console.log('Loading drivers data');
+    
+    const driversList = document.getElementById('drivers-list');
+    if (!driversList) {
+        console.error('Drivers list element not found');
+        return;
+    }
     
     // Clear existing content
     driversList.innerHTML = '';
@@ -135,13 +146,11 @@ function renderDriver(driver) {
 
 // Show driver details
 function showDriverDetails(driver) {
-    // In a real implementation, this would show a modal with detailed information
     alert(`Detailed view for ${driver.firstName} ${driver.lastName}\nIn a real implementation, this would show all driver details and current tenders.`);
 }
 
 // Show add driver form
 function showAddDriverForm() {
-    // In a real implementation, this would show a modal form
     const name = prompt('Enter driver first name:');
     if (!name) return;
     
