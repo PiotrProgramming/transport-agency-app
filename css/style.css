@@ -32,7 +32,6 @@ body {
     padding: 0 20px;
 }
 
-/* FIX: Changed from display: none to visibility:hidden with height:0 */
 .view {
     visibility: hidden;
     height: 0;
