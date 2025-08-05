@@ -1,27 +1,42 @@
-// DOM Elements
-let tendersList;
-let addTenderBtn;
-
 // Initialize tenders management
 function initTenders() {
-    tendersList = document.getElementById('tenders-list');
-    addTenderBtn = document.getElementById('add-tender-btn');
+    console.log('Initializing tenders view');
     
-    // Set up event listeners
-    if (addTenderBtn) {
+    // Register this view's initializer with the app state
+    appState.registerViewInitializer('tenders', function() {
+        console.log('Tenders view initialized');
+    });
+    
+    // Register this view's data loader with the app state
+    appState.registerViewLoader('tenders', function() {
+        console.log('Tenders view data loader called');
+        loadTendersData();
+    });
+    
+    // Set up event listeners for the add tender button
+    const addTenderBtn = document.getElementById('add-tender-btn');
+    if (addTenderBtn && !addTenderBtn.dataset.initialized) {
         addTenderBtn.addEventListener('click', showAddTenderForm);
+        addTenderBtn.dataset.initialized = 'true';
     }
     
-    // Status filter
+    // Set up status filter
     const statusFilter = document.getElementById('tenders-status-filter');
-    if (statusFilter) {
+    if (statusFilter && !statusFilter.dataset.initialized) {
         statusFilter.addEventListener('change', filterTenders);
+        statusFilter.dataset.initialized = 'true';
     }
 }
 
 // Load tenders data
 function loadTendersData() {
-    if (!tendersList) return;
+    console.log('Loading tenders data');
+    
+    const tendersList = document.getElementById('tenders-list');
+    if (!tendersList) {
+        console.error('Tenders list element not found');
+        return;
+    }
     
     // Clear existing content
     tendersList.innerHTML = '';
@@ -70,6 +85,8 @@ function loadTendersData() {
     sampleTenders.forEach(tender => {
         renderTender(tender);
     });
+    
+    console.log(`Successfully loaded ${sampleTenders.length} tenders`);
 }
 
 // Render a single tender
@@ -139,7 +156,6 @@ function renderTender(tender) {
 
 // Show add tender form
 function showAddTenderForm() {
-    // In a real implementation, this would show a modal form
     const route = prompt('Enter route (e.g., Berlin → Paris):');
     if (!route) return;
     
@@ -171,7 +187,6 @@ function showAddTenderForm() {
 
 // Assign tender to driver
 function assignTender(tender) {
-    // In a real implementation, this would show a list of available drivers
     const driver = prompt('Enter driver name to assign this tender to:');
     if (!driver) return;
     
@@ -198,7 +213,6 @@ function assignTender(tender) {
 
 // Show tender details
 function showTenderDetails(tender) {
-    // In a real implementation, this would show a detailed modal
     let additionalInfo = '';
     
     if (tender.status === 'sold') {
