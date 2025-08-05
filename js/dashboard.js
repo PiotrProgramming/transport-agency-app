@@ -1,8 +1,13 @@
 // Load dashboard data
 function loadDashboardData() {
+    console.log('Loading dashboard data');
+    
     // Get the tenders table body
     const tendersTable = document.getElementById('dashboard-tenders');
-    if (!tendersTable) return;
+    if (!tendersTable) {
+        console.error('Dashboard tenders table not found');
+        return;
+    }
     
     // Clear existing content
     tendersTable.innerHTML = '';
@@ -84,17 +89,13 @@ function loadDashboardData() {
 
 // Initialize dashboard
 function initDashboard() {
-    // Load data when the view becomes active
-    document.addEventListener('viewchange', (e) => {
-        if (e.detail === 'dashboard') {
-            loadDashboardData();
-        }
-    });
+    console.log('Initializing dashboard view');
     
-    // Initial load if dashboard is the current view
-    if (appState.currentView === 'dashboard') {
+    // Register this view's initializer with the app state
+    appState.registerViewInitializer('dashboard', function() {
+        console.log('Dashboard view activated - loading data');
         loadDashboardData();
-    }
+    });
 }
 
 // Initialize dashboard when DOM is loaded
