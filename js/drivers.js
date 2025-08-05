@@ -4,7 +4,12 @@ function initDrivers() {
     
     // Register this view's initializer with the app state
     appState.registerViewInitializer('drivers', function() {
-        console.log('Drivers view activated - loading data');
+        console.log('Drivers view initialized');
+    });
+    
+    // Register this view's data loader with the app state
+    appState.registerViewLoader('drivers', function() {
+        console.log('Drivers view data loader called');
         loadDriversData();
     });
     
@@ -81,6 +86,8 @@ function loadDriversData() {
     sampleDrivers.forEach(driver => {
         renderDriver(driver);
     });
+    
+    console.log(`Successfully loaded ${sampleDrivers.length} drivers`);
 }
 
 // Render a single driver
