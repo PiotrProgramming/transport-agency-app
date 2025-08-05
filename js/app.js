@@ -16,7 +16,7 @@ const appState = {
         }
     },
     viewInitializers: {}, // Store view initialization functions
-    viewLoaders: {} // Store view data loading functions
+    viewLoaders: {} // Store view data loading functions,
 };
 
 // DOM Elements
@@ -109,18 +109,28 @@ function activateView(view) {
             // Initialize the view if we have an initializer
             if (appState.viewInitializers[view]) {
                 console.log(`Calling initializer for ${view}`);
-                appState.viewInitializers[view]();
+                try {
+                    appState.viewInitializers[view]();
+                } catch (error) {
+                    console.error(`Error in initializer for ${view}:`, error);
+                }
             } else {
                 console.log(`No initializer registered for view: ${view}`);
             }
             
             // Load data for the view
-            if (appState.viewLoaders[view]) {
-                console.log(`Calling loader for ${view}`);
-                appState.viewLoaders[view]();
-            } else {
-                console.log(`No loader registered for view: ${view}`);
-            }
+            setTimeout(() => {
+                if (appState.viewLoaders[view]) {
+                    console.log(`Calling loader for ${view}`);
+                    try {
+                        appState.viewLoaders[view]();
+                    } catch (error) {
+                        console.error(`Error loading data for ${view}:`, error);
+                    }
+                } else {
+                    console.log(`No loader registered for view: ${view}`);
+                }
+            }, 50);
         }, 50);
     } else {
         console.error(`View element not found: ${view}-view`);
@@ -142,7 +152,7 @@ function checkAuthStatus() {
         // Set a small delay to ensure proper view transition
         setTimeout(() => {
             activateView(appState.currentView || 'dashboard');
-        }, 50);
+        }, 100);
     } else {
         authView.classList.add('active');
         appView.classList.remove('active');
