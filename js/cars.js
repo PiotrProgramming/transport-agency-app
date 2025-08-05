@@ -1,27 +1,42 @@
-// DOM Elements
-let carsList;
-let addCarBtn;
-
 // Initialize cars management
 function initCars() {
-    carsList = document.getElementById('cars-list');
-    addCarBtn = document.getElementById('add-car-btn');
+    console.log('Initializing cars view');
     
-    // Set up event listeners
-    if (addCarBtn) {
+    // Register this view's initializer with the app state
+    appState.registerViewInitializer('cars', function() {
+        console.log('Cars view initialized');
+    });
+    
+    // Register this view's data loader with the app state
+    appState.registerViewLoader('cars', function() {
+        console.log('Cars view data loader called');
+        loadCarsData();
+    });
+    
+    // Set up event listeners for the add car button
+    const addCarBtn = document.getElementById('add-car-btn');
+    if (addCarBtn && !addCarBtn.dataset.initialized) {
         addCarBtn.addEventListener('click', showAddCarForm);
+        addCarBtn.dataset.initialized = 'true';
     }
     
-    // Status filter
+    // Set up status filter
     const statusFilter = document.getElementById('cars-status-filter');
-    if (statusFilter) {
+    if (statusFilter && !statusFilter.dataset.initialized) {
         statusFilter.addEventListener('change', filterCars);
+        statusFilter.dataset.initialized = 'true';
     }
 }
 
 // Load cars data
 function loadCarsData() {
-    if (!carsList) return;
+    console.log('Loading cars data');
+    
+    const carsList = document.getElementById('cars-list');
+    if (!carsList) {
+        console.error('Cars list element not found');
+        return;
+    }
     
     // Clear existing content
     carsList.innerHTML = '';
@@ -67,6 +82,8 @@ function loadCarsData() {
     sampleCars.forEach(car => {
         renderCar(car);
     });
+    
+    console.log(`Successfully loaded ${sampleCars.length} cars`);
 }
 
 // Render a single car
@@ -110,7 +127,6 @@ function renderCar(car) {
 
 // Show add car form
 function showAddCarForm() {
-    // In a real implementation, this would show a modal form
     const tractorPlate = prompt('Enter tractor plate number:');
     if (!tractorPlate) return;
     
