@@ -1,27 +1,42 @@
-// DOM Elements
-let invoicesList;
-let addInvoiceBtn;
-
 // Initialize invoices management
 function initInvoices() {
-    invoicesList = document.getElementById('invoices-list');
-    addInvoiceBtn = document.getElementById('add-invoice-btn');
+    console.log('Initializing invoices view');
     
-    // Set up event listeners
-    if (addInvoiceBtn) {
+    // Register this view's initializer with the app state
+    appState.registerViewInitializer('invoices', function() {
+        console.log('Invoices view initialized');
+    });
+    
+    // Register this view's data loader with the app state
+    appState.registerViewLoader('invoices', function() {
+        console.log('Invoices view data loader called');
+        loadInvoicesData();
+    });
+    
+    // Set up event listeners for the add invoice button
+    const addInvoiceBtn = document.getElementById('add-invoice-btn');
+    if (addInvoiceBtn && !addInvoiceBtn.dataset.initialized) {
         addInvoiceBtn.addEventListener('click', showAddInvoiceForm);
+        addInvoiceBtn.dataset.initialized = 'true';
     }
     
-    // Status filter
+    // Set up status filter
     const statusFilter = document.getElementById('invoices-status-filter');
-    if (statusFilter) {
+    if (statusFilter && !statusFilter.dataset.initialized) {
         statusFilter.addEventListener('change', filterInvoices);
+        statusFilter.dataset.initialized = 'true';
     }
 }
 
 // Load invoices data
 function loadInvoicesData() {
-    if (!invoicesList) return;
+    console.log('Loading invoices data');
+    
+    const invoicesList = document.getElementById('invoices-list');
+    if (!invoicesList) {
+        console.error('Invoices list element not found');
+        return;
+    }
     
     // Clear existing content
     invoicesList.innerHTML = '';
@@ -61,6 +76,8 @@ function loadInvoicesData() {
     sampleInvoices.forEach(invoice => {
         renderInvoice(invoice);
     });
+    
+    console.log(`Successfully loaded ${sampleInvoices.length} invoices`);
 }
 
 // Render a single invoice
@@ -107,7 +124,6 @@ function renderInvoice(invoice) {
 
 // Show add invoice form
 function showAddInvoiceForm() {
-    // In a real implementation, this would show a modal form
     const client = prompt('Enter client name:');
     if (!client) return;
     
