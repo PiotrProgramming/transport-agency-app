@@ -1,17 +1,23 @@
-// DOM Elements
-let cardsList;
-let addCardBtn;
-let assignmentContainer;
-
 // Initialize cards management
 function initCards() {
-    cardsList = document.getElementById('cards-list');
-    addCardBtn = document.getElementById('add-card-btn');
-    assignmentContainer = document.getElementById('assignment-container');
+    console.log('Initializing cards view');
     
-    // Set up event listeners
-    if (addCardBtn) {
+    // Register this view's initializer with the app state
+    appState.registerViewInitializer('cards', function() {
+        console.log('Cards view initialized');
+    });
+    
+    // Register this view's data loader with the app state
+    appState.registerViewLoader('cards', function() {
+        console.log('Cards view data loader called');
+        loadCardsData();
+    });
+    
+    // Set up event listeners for the add card button
+    const addCardBtn = document.getElementById('add-card-btn');
+    if (addCardBtn && !addCardBtn.dataset.initialized) {
         addCardBtn.addEventListener('click', showAddCardForm);
+        addCardBtn.dataset.initialized = 'true';
     }
     
     // Initialize drag and drop
@@ -20,11 +26,16 @@ function initCards() {
 
 // Load cards data
 function loadCardsData() {
-    if (!cardsList || !assignmentContainer) return;
+    console.log('Loading cards data');
+    
+    const cardsList = document.getElementById('cards-list');
+    if (!cardsList) {
+        console.error('Cards list element not found');
+        return;
+    }
     
     // Clear existing content
     cardsList.innerHTML = '';
-    assignmentContainer.innerHTML = '';
     
     // In a real implementation, we would fetch this from GitHub
     const sampleCards = [
@@ -64,6 +75,8 @@ function loadCardsData() {
     
     // Initialize drag and drop areas
     initAssignmentAreas();
+    
+    console.log(`Successfully loaded ${sampleCards.length} cards`);
 }
 
 // Render a single card
@@ -113,7 +126,6 @@ function renderCard(card) {
 
 // Show add card form
 function showAddCardForm() {
-    // In a real implementation, this would show a modal form
     const number = prompt('Enter card number (last 4 digits):');
     if (!number) return;
     
@@ -157,6 +169,12 @@ function editCard(card) {
 
 // Initialize drag and drop areas
 function initAssignmentAreas() {
+    const assignmentContainer = document.getElementById('assignment-container');
+    if (!assignmentContainer) return;
+    
+    // Clear existing content
+    assignmentContainer.innerHTML = '';
+    
     // In a real implementation, we would fetch drivers and cards from GitHub
     const sampleDrivers = [
         { id: 1, name: 'Michael Johnson', status: 'available' },
