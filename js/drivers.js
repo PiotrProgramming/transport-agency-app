@@ -1,20 +1,16 @@
 // Initialize drivers management
 function initDrivers() {
-    console.log('Initializing drivers view');
-    
     // Register this view's initializer with the app state
     appState.registerViewInitializer('drivers', function() {
-        console.log('Drivers view initialized');
+        // View is already active, no need for special initialization
     });
     
     // Register this view's data loader with the app state
     appState.registerViewLoader('drivers', function() {
-        console.log('Drivers view data loader called');
         loadDriversData();
     });
     
     // Set up event listeners for the add driver button
-    // These need to be set up once, not on every view activation
     const addDriverBtn = document.getElementById('add-driver-btn');
     if (addDriverBtn && !addDriverBtn.dataset.initialized) {
         addDriverBtn.addEventListener('click', showAddDriverForm);
@@ -31,11 +27,8 @@ function initDrivers() {
 
 // Load drivers data
 function loadDriversData() {
-    console.log('Loading drivers data');
-    
     const driversList = document.getElementById('drivers-list');
     if (!driversList) {
-        console.error('Drivers list element not found');
         return;
     }
     
@@ -86,8 +79,6 @@ function loadDriversData() {
     sampleDrivers.forEach(driver => {
         renderDriver(driver);
     });
-    
-    console.log(`Successfully loaded ${sampleDrivers.length} drivers`);
 }
 
 // Render a single driver
