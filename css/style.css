@@ -34,28 +34,20 @@ body {
     width: 100%;
 }
 
-/* CRITICAL FIX: Simplified view visibility */
+/* CRITICAL FIX: Proper view visibility management */
 .view {
     display: none;
 }
 
 .view.active {
     display: block;
-    opacity: 1;
-    visibility: visible;
 }
 
-/* Ensure app container has proper height */
+/* App Container */
 .app-container {
     display: flex;
     min-height: calc(100vh - 100px);
     width: 100%;
-}
-
-/* DEBUG: Add borders to see container structure */
-.debug {
-    border: 1px solid red;
-    min-height: 50px;
 }
 
 /* Content Area */
@@ -66,27 +58,13 @@ body {
     min-height: 100%;
 }
 
-/* Ensure tables and containers have proper height */
+/* Data Tables */
 .data-table-container {
     background-color: var(--primary);
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
     overflow: hidden;
     margin-bottom: 30px;
-    min-height: 200px;
-}
-
-/* Ensure table rows are visible */
-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 100%;
-}
-
-th, td {
-    padding: 12px 15px;
-    border-bottom: 1px solid var(--medium-gray);
-    min-width: 100px;
 }
 
 /* Button Styles */
