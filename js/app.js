@@ -58,27 +58,23 @@ function initApp() {
     });
 
     // Notification dropdown
-    if (notificationBell) {
-        notificationBell.addEventListener('click', (e) => {
-            e.stopPropagation();
-            notificationDropdown.style.display = notificationDropdown.style.display === 'block' ? 'none' : 'block';
-        });
-    }
+    notificationBell.addEventListener('click', (e) => {
+        e.stopPropagation();
+        notificationDropdown.style.display = notificationDropdown.style.display === 'block' ? 'none' : 'block';
+    });
 
     // User dropdown
-    if (userProfile) {
-        userProfile.addEventListener('click', (e) => {
-            e.stopPropagation();
-            userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
-        });
-    }
+    userProfile.addEventListener('click', (e) => {
+        e.stopPropagation();
+        userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
+    });
 
     // Close dropdowns when clicking outside
     document.addEventListener('click', (e) => {
-        if (notificationBell && !notificationBell.contains(e.target)) {
+        if (!notificationBell.contains(e.target)) {
             notificationDropdown.style.display = 'none';
         }
-        if (userProfile && !userProfile.contains(e.target)) {
+        if (!userProfile.contains(e.target)) {
             userDropdown.style.display = 'none';
         }
     });
@@ -86,6 +82,8 @@ function initApp() {
 
 // Activate a view
 function activateView(view) {
+    console.log(`Activating view: ${view}`);
+    
     // Update navigation highlights
     navItems.forEach(i => i.classList.remove('active'));
     const activeNavItem = document.querySelector(`.nav-item[data-view="${view}"]`);
@@ -104,20 +102,26 @@ function activateView(view) {
         
         // Initialize the view if we have an initializer
         if (appState.viewInitializers[view]) {
+            console.log(`Calling initializer for ${view}`);
             try {
                 appState.viewInitializers[view]();
             } catch (error) {
                 console.error(`Error in initializer for ${view}:`, error);
             }
+        } else {
+            console.log(`No initializer registered for view: ${view}`);
         }
         
         // Load data for the view
         if (appState.viewLoaders[view]) {
+            console.log(`Calling loader for ${view}`);
             try {
                 appState.viewLoaders[view]();
             } catch (error) {
                 console.error(`Error loading data for ${view}:`, error);
             }
+        } else {
+            console.log(`No loader registered for view: ${view}`);
         }
     } else {
         console.error(`View element not found: ${view}-view`);
@@ -126,6 +130,8 @@ function activateView(view) {
 
 // Check authentication status
 function checkAuthStatus() {
+    console.log('Checking authentication status');
+    
     // Make sure notifications array is initialized
     if (!appState.notifications) {
         appState.notifications = [];
@@ -133,12 +139,14 @@ function checkAuthStatus() {
     
     // In a real implementation, we would check for stored credentials
     if (appState.isAuthenticated) {
+        console.log('User is authenticated');
         authView.classList.remove('active');
         appView.classList.add('active');
         
         // Activate the current view
         activateView(appState.currentView || 'dashboard');
     } else {
+        console.log('User is not authenticated');
         authView.classList.add('active');
         appView.classList.remove('active');
     }
@@ -146,6 +154,8 @@ function checkAuthStatus() {
 
 // Load initial data after login
 function loadInitialData() {
+    console.log('Loading initial data');
+    
     // Set current repository in admin view
     if (appState.repo) {
         const repoInput = document.getElementById('current-repo');
@@ -161,6 +171,8 @@ function loadInitialData() {
 
 // Load notifications
 function loadNotifications() {
+    console.log('Loading notifications');
+    
     // Ensure appState.notifications is initialized
     if (!appState.notifications) {
         appState.notifications = [];
@@ -168,6 +180,7 @@ function loadNotifications() {
     
     const notificationList = document.getElementById('notification-dropdown');
     if (!notificationList) {
+        console.error('Notification dropdown not found');
         return;
     }
     
@@ -211,6 +224,8 @@ function loadNotifications() {
 
 // Mark notification as read
 function markNotificationAsRead(id) {
+    console.log(`Marking notification as read: ${id}`);
+    
     // Ensure notifications array is initialized
     if (!appState.notifications) {
         appState.notifications = [];
@@ -232,6 +247,7 @@ function markNotificationAsRead(id) {
 
 // Initialize the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM fully loaded and parsed');
     initApp();
     
     // If we're already authenticated, load initial data
