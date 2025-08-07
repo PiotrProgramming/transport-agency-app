@@ -38,6 +38,16 @@ body {
     height: 100%;
 }
 
+/* CRITICAL FIX: Proper view visibility */
+.view {
+    display: none;
+    height: 100%;
+}
+
+.view.active {
+    display: block;
+}
+
 /* Auth View - Full screen */
 #auth-view {
     height: 100vh;
@@ -46,11 +56,6 @@ body {
 /* App View - Must take full height */
 #app-view {
     height: 100%;
-    display: none;
-}
-
-#app-view.active {
-    display: block;
 }
 
 /* Header - Fixed height */
