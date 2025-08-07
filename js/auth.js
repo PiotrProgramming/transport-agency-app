@@ -137,11 +137,14 @@ async function verifyTokenAndRepoAccess(token, repo) {
     const user = await userResponse.json();
     appState.githubUsername = user.login;
     
-    // Parse repository name
-    const [owner, repoName] = repo.split('/');
-    if (!owner || !repoName) {
+    // Parse repository name with validation
+    const repoParts = repo.split('/');
+    if (repoParts.length < 2) {
         throw new Error('Repository name must be in "owner/repo" format');
     }
+    
+    const owner = repoParts[0];
+    const repoName = repoParts.slice(1).join('/');
     
     // Check if repository exists
     const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repoName}`, {
