@@ -2,7 +2,7 @@
     <div class="page-title">
         <h1 class="title-text">Drivers Management</h1>
         <div class="action-buttons">
-            <button class="btn btn-outline">Import</button>
+            <button class="btn btn-outline" id="drivers-import-btn">Import</button>
             <button class="btn btn-primary" id="add-driver-btn">Add Driver</button>
         </div>
     </div>
@@ -20,10 +20,13 @@
             </div>
         </div>
         <div id="drivers-list" class="drivers-container">
-            <div class="loading-indicator" id="drivers-loading">
-                <span></span>
-                <span></span>
-                <span></span>
+            <div class="view-placeholder">
+                <div class="loading-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <p>Loading drivers data...</p>
             </div>
         </div>
     </div>
