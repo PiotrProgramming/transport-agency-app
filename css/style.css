@@ -38,17 +38,7 @@ body {
     height: 100%;
 }
 
-/* CRITICAL FIX: Proper view visibility and height management */
-.view {
-    display: none;
-    height: 100%;
-}
-
-.view.active {
-    display: block;
-}
-
-/* Auth View - Full screen when active */
+/* Auth View - Full screen */
 #auth-view {
     height: 100vh;
 }
@@ -82,7 +72,7 @@ header {
 /* App Container - Must fill remaining space */
 .app-container {
     display: flex;
-    height: calc(100% - 60px); /* Subtract header height */
+    height: calc(100% - 60px);
     min-height: calc(100vh - 60px);
 }
 
@@ -112,33 +102,6 @@ header {
     align-items: center;
     margin-bottom: 25px;
     height: 40px;
-}
-
-/* Data Tables - Must fill available space */
-.data-table-container {
-    background-color: var(--primary);
-    border-radius: var(--border-radius);
-    box-shadow: var(--box-shadow);
-    overflow: hidden;
-    margin-bottom: 30px;
-    height: calc(100% - 180px); /* Adjust based on your layout */
-    display: flex;
-    flex-direction: column;
-}
-
-/* Table - Fill container */
-table {
-    width: 100%;
-    border-collapse: collapse;
-    flex: 1;
-    display: table;
-}
-
-/* Table body - Scrollable if needed */
-tbody {
-    display: table-row-group;
-    overflow-y: auto;
-    max-height: 400px;
 }
 
 /* Button Styles */
