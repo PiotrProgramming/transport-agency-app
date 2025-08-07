@@ -14,19 +14,18 @@ const appState = {
             'Accept': 'application/vnd.github.v3+json',
             'Content-Type': 'application/json'
         }
+    },
+    // Retry configuration for GitHub API
+    apiRetryConfig: {
+        maxRetries: 3,
+        initialDelay: 1000,
+        backoffFactor: 2
     }
 };
 
 // DOM Elements
-const authView = document.getElementById('auth-view');
-const appView = document.getElementById('app-view');
-const contentArea = document.getElementById('content-area');
-const navItems = document.querySelectorAll('.nav-item');
-const notificationBell = document.getElementById('notification-bell');
-const notificationDropdown = document.getElementById('notification-dropdown');
-const userProfile = document.getElementById('user-profile');
-const userDropdown = document.getElementById('user-dropdown');
-const logoutBtn = document.getElementById('logout-btn');
+let authView, appView, contentArea, navItems, notificationBell, notificationDropdown, 
+    userProfile, userDropdown, logoutBtn;
 
 // GitHub Service - Handles all GitHub API interactions
 const githubService = {
@@ -36,21 +35,19 @@ const githubService = {
             throw new Error('Repository and token must be set');
         }
         
-        const [owner, repo] = appState.repo.split('/');
-        if (!owner || !repo) {
+        // Parse repository name with validation
+        const repoParts = appState.repo.split('/');
+        if (repoParts.length < 2) {
             throw new Error('Repository name must be in "owner/repo" format');
         }
         
+        const owner = repoParts[0];
+        const repo = repoParts.slice(1).join('/');
+        
         try {
-            const response = await fetch(
-                `${this.baseUrl}/repos/${owner}/${repo}/contents/${path}`,
-                { headers: this.getHeaders() }
+            const response = await this._makeApiRequest(
+                `${this.baseUrl}/repos/${owner}/${repo}/contents/${path}`
             );
-            
-            if (!response.ok) {
-                const error = await response.json().catch(() => ({}));
-                throw new Error(error.message || `Failed to fetch ${path}`);
-            }
             
             const data = await response.json();
             return JSON.parse(atob(data.content));
@@ -66,30 +63,41 @@ const githubService = {
             throw new Error('Repository and token must be set');
         }
         
-        const [owner, repo] = appState.repo.split('/');
-        if (!owner || !repo) {
+        // Parse repository name with validation
+        const repoParts = appState.repo.split('/');
+        if (repoParts.length < 2) {
             throw new Error('Repository name must be in "owner/repo" format');
         }
+        
+        const owner = repoParts[0];
+        const repo = repoParts.slice(1).join('/');
         
         try {
             // First get the current file info to get the SHA
             let sha = null;
-            const fileInfoResponse = await fetch(
-                `${this.baseUrl}/repos/${owner}/${repo}/contents/${path}`,
-                { headers: this.getHeaders() }
-            );
-            
-            if (fileInfoResponse.ok) {
-                const fileInfo = await fileInfoResponse.json();
-                sha = fileInfo.sha;
+            try {
+                const fileInfoResponse = await this._makeApiRequest(
+                    `${this.baseUrl}/repos/${owner}/${repo}/contents/${path}`
+                );
+                
+                if (fileInfoResponse.ok) {
+                    const fileInfo = await fileInfoResponse.json();
+                    sha = fileInfo.sha;
+                }
+            } catch (error) {
+                // File might not exist yet, which is fine
+                if (error.message.includes('404')) {
+                    console.log(`File ${path} not found, will create new`);
+                } else {
+                    throw error;
+                }
             }
             
             // Update the file
-            const response = await fetch(
+            const response = await this._makeApiRequest(
                 `${this.baseUrl}/repos/${owner}/${repo}/contents/${path}`,
                 {
                     method: 'PUT',
-                    headers: this.getHeaders(),
                     body: JSON.stringify({
                         message: message,
                         content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2)))),
@@ -97,11 +105,6 @@ const githubService = {
                     })
                 }
             );
-            
-            if (!response.ok) {
-                const error = await response.json().catch(() => ({}));
-                throw new Error(error.message || `Failed to update ${path}`);
-            }
             
             return response.json();
         } catch (error) {
@@ -122,11 +125,71 @@ const githubService = {
     // Base URL for GitHub API
     get baseUrl() {
         return 'https://api.github.com';
+    },
+    
+    // Make API request with retry logic
+    async _makeApiRequest(url, options = {}) {
+        const config = appState.apiRetryConfig;
+        let lastError;
+        
+        for (let i = 0; i <= config.maxRetries; i++) {
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    headers: {
+                        ...this.getHeaders(),
+                        ...(options.headers || {})
+                    }
+                });
+                
+                // Handle rate limiting
+                if (response.status === 403) {
+                    const rateLimitReset = response.headers.get('X-RateLimit-Reset');
+                    if (rateLimitReset) {
+                        const resetTime = new Date(parseInt(rateLimitReset) * 1000);
+                        const waitTime = Math.max(0, resetTime - Date.now() + 1000);
+                        
+                        console.log(`GitHub API rate limited. Waiting ${waitTime}ms before retry...`);
+                        await new Promise(resolve => setTimeout(resolve, waitTime));
+                        continue;
+                    }
+                }
+                
+                if (!response.ok) {
+                    throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
+                }
+                
+                return response;
+            } catch (error) {
+                lastError = error;
+                
+                if (i < config.maxRetries) {
+                    const delay = config.initialDelay * Math.pow(config.backoffFactor, i);
+                    console.log(`Retry ${i+1}/${config.maxRetries} after ${delay}ms:`, error);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    throw lastError;
+                }
+            }
+        }
+        
+        throw lastError;
     }
 };
 
 // Initialize the application
 function initApp() {
+    // Initialize DOM elements
+    authView = document.getElementById('auth-view');
+    appView = document.getElementById('app-view');
+    contentArea = document.getElementById('content-area');
+    navItems = document.querySelectorAll('.nav-item');
+    notificationBell = document.getElementById('notification-bell');
+    notificationDropdown = document.getElementById('notification-dropdown');
+    userProfile = document.getElementById('user-profile');
+    userDropdown = document.getElementById('user-dropdown');
+    logoutBtn = document.getElementById('logout-btn');
+    
     // Make sure notifications array is initialized
     if (!appState.notifications) {
         appState.notifications = [];
@@ -136,15 +199,17 @@ function initApp() {
     checkAuthStatus();
     
     // Navigation
-    navItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const view = item.getAttribute('data-view');
-            loadView(view);
+    if (navItems) {
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const view = item.getAttribute('data-view');
+                loadView(view);
+            });
         });
-    });
+    }
 
     // Notification dropdown
-    if (notificationBell) {
+    if (notificationBell && notificationDropdown) {
         notificationBell.addEventListener('click', (e) => {
             e.stopPropagation();
             notificationDropdown.style.display = notificationDropdown.style.display === 'block' ? 'none' : 'block';
@@ -152,17 +217,19 @@ function initApp() {
     }
 
     // User dropdown
-    userProfile.addEventListener('click', (e) => {
-        e.stopPropagation();
-        userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
-    });
+    if (userProfile && userDropdown) {
+        userProfile.addEventListener('click', (e) => {
+            e.stopPropagation();
+            userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
+        });
+    }
 
     // Close dropdowns when clicking outside
     document.addEventListener('click', (e) => {
-        if (!notificationBell.contains(e.target)) {
+        if (notificationBell && !notificationBell.contains(e.target)) {
             notificationDropdown.style.display = 'none';
         }
-        if (!userProfile.contains(e.target)) {
+        if (userProfile && !userProfile.contains(e.target)) {
             userDropdown.style.display = 'none';
         }
     });
@@ -173,9 +240,11 @@ function loadView(view) {
     console.log(`Loading view: ${view}`);
     
     // Update navigation highlights
-    navItems.forEach(i => i.classList.remove('active'));
-    const activeNavItem = document.querySelector(`.nav-item[data-view="${view}"]`);
-    if (activeNavItem) activeNavItem.classList.add('active');
+    if (navItems) {
+        navItems.forEach(i => i.classList.remove('active'));
+        const activeNavItem = document.querySelector(`.nav-item[data-view="${view}"]`);
+        if (activeNavItem) activeNavItem.classList.add('active');
+    }
     
     // Load the HTML fragment
     fetch(`views/${view}.html`)
@@ -187,30 +256,36 @@ function loadView(view) {
         })
         .then(html => {
             // Insert the HTML into the content area
-            contentArea.innerHTML = html;
-            
-            // Store the current view
-            appState.currentView = view;
-            
-            // Initialize view-specific JavaScript
-            initView(view);
-            
-            // Load data for the view
-            loadData(view);
+            if (contentArea) {
+                contentArea.innerHTML = html;
+                
+                // Store the current view
+                appState.currentView = view;
+                
+                // Initialize view-specific JavaScript AFTER the HTML is rendered
+                setTimeout(() => {
+                    initView(view);
+                    loadData(view);
+                }, 100);
+            }
         })
         .catch(error => {
             console.error(error);
-            contentArea.innerHTML = `
-                <div class="error-message" style="padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <h3 style="color: var(--dark-red); margin-bottom: 10px;">Error Loading View</h3>
-                    <p style="color: var(--secondary);">${error.message}</p>
-                </div>
-            `;
+            if (contentArea) {
+                contentArea.innerHTML = `
+                    <div class="error-message" style="padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <h3 style="color: var(--dark-red); margin-bottom: 10px;">Error Loading View</h3>
+                        <p style="color: var(--secondary);">${error.message}</p>
+                    </div>
+                `;
+            }
         });
 }
 
 // Initialize view-specific JavaScript
 function initView(view) {
+    console.log(`Initializing view: ${view}`);
+    
     // This is where you would initialize view-specific JavaScript
     // For now, we'll just handle a few special cases
     
@@ -295,15 +370,15 @@ function checkAuthStatus() {
     // In a real implementation, we would check for stored credentials
     if (appState.isAuthenticated) {
         console.log('User is authenticated');
-        authView.classList.remove('active');
-        appView.classList.add('active');
+        if (authView) authView.classList.remove('active');
+        if (appView) appView.classList.add('active');
         
         // Load the dashboard view
         loadView(appState.currentView || 'dashboard');
     } else {
         console.log('User is not authenticated');
-        authView.classList.add('active');
-        appView.classList.remove('active');
+        if (authView) authView.classList.add('active');
+        if (appView) appView.classList.remove('active');
     }
 }
 
@@ -325,7 +400,7 @@ function loadInitialData() {
 }
 
 // Load notifications
-function loadNotifications() {
+async function loadNotifications() {
     console.log('Loading notifications');
     
     // Ensure appState.notifications is initialized
@@ -344,37 +419,101 @@ function loadNotifications() {
         notificationList.removeChild(notificationList.lastChild);
     }
     
-    // Add sample notifications
-    const sampleNotifications = [
-        { id: 1, title: 'Driver License Expiring', time: '2 hours ago', read: false },
-        { id: 2, title: 'Tender #TX-7890 Delivered', time: '5 hours ago', read: false },
-        { id: 3, title: 'Invoice #INV-2023 Due Soon', time: '1 day ago', read: false }
-    ];
-    
-    appState.notifications = sampleNotifications;
-    
-    // Update badge count
-    const badge = document.querySelector('.notification-badge');
-    if (badge) {
-        badge.textContent = sampleNotifications.length;
-    }
-    
-    // Add notifications to dropdown
-    sampleNotifications.forEach(notification => {
-        const notificationItem = document.createElement('div');
-        notificationItem.className = 'notification-item';
-        if (notification.read) {
-            notificationItem.style.fontWeight = 'normal';
-        }
-        notificationItem.innerHTML = `
-            <div class="notification-title">${notification.title}</div>
-            <div class="notification-time">${notification.time}</div>
-        `;
-        notificationItem.addEventListener('click', () => {
-            markNotificationAsRead(notification.id);
+    try {
+        // REAL DATABASE CALL - Fetch notifications from GitHub
+        const tenders = await githubService.getFileContent('tenders.json');
+        const drivers = await githubService.getFileContent('drivers.json');
+        
+        // Generate notifications based on data
+        const notifications = [];
+        
+        // Driver license expirations
+        drivers.forEach(driver => {
+            const licenseExpiry = new Date(driver.licenseExpiry);
+            const today = new Date();
+            const daysUntilExpiry = Math.ceil((licenseExpiry - today) / (1000 * 60 * 60 * 24));
+            
+            if (daysUntilExpiry <= 7 && daysUntilExpiry >= 0) {
+                notifications.push({
+                    id: `driver-license-${driver.id}`,
+                    title: 'Driver License Expiring',
+                    description: `${driver.firstName} ${driver.lastName}'s license expires in ${daysUntilExpiry} days`,
+                    time: 'Just now',
+                    type: 'warning'
+                });
+            }
         });
-        notificationList.appendChild(notificationItem);
-    });
+        
+        // Tender delivery notifications
+        tenders.forEach(tender => {
+            if (tender.status === 'delivered') {
+                notifications.push({
+                    id: `tender-delivered-${tender.id}`,
+                    title: 'Tender Delivered',
+                    description: `Tender #${tender.id} (${tender.route}) has been delivered`,
+                    time: 'Just now',
+                    type: 'info'
+                });
+            }
+        });
+        
+        // Set notifications
+        appState.notifications = notifications;
+        
+        // Update badge count
+        const badge = document.querySelector('.notification-badge');
+        if (badge) {
+            badge.textContent = notifications.length > 0 ? notifications.length : '';
+        }
+        
+        // Add notifications to dropdown
+        notifications.forEach(notification => {
+            const notificationItem = document.createElement('div');
+            notificationItem.className = 'notification-item';
+            notificationItem.dataset.id = notification.id;
+            notificationItem.innerHTML = `
+                <div class="notification-title">${notification.title}</div>
+                <div class="notification-description">${notification.description}</div>
+                <div class="notification-time">${notification.time}</div>
+            `;
+            notificationItem.addEventListener('click', () => {
+                markNotificationAsRead(notification.id);
+            });
+            notificationList.appendChild(notificationItem);
+        });
+    } catch (error) {
+        console.error('Error loading notifications:', error);
+        
+        // Fallback to simple notifications if database access fails
+        const sampleNotifications = [
+            { id: 1, title: 'Driver License Expiring', time: '2 hours ago', read: false },
+            { id: 2, title: 'Tender #TX-7890 Delivered', time: '5 hours ago', read: false },
+            { id: 3, title: 'Invoice #INV-2023 Due Soon', time: '1 day ago', read: false }
+        ];
+        
+        appState.notifications = sampleNotifications;
+        
+        // Update badge count
+        const badge = document.querySelector('.notification-badge');
+        if (badge) {
+            badge.textContent = sampleNotifications.length;
+        }
+        
+        // Add notifications to dropdown
+        sampleNotifications.forEach(notification => {
+            const notificationItem = document.createElement('div');
+            notificationItem.className = 'notification-item';
+            notificationItem.dataset.id = notification.id;
+            notificationItem.innerHTML = `
+                <div class="notification-title">${notification.title}</div>
+                <div class="notification-time">${notification.time}</div>
+            `;
+            notificationItem.addEventListener('click', () => {
+                markNotificationAsRead(notification.id);
+            });
+            notificationList.appendChild(notificationItem);
+        });
+    }
 }
 
 // Mark notification as read
@@ -386,14 +525,14 @@ function markNotificationAsRead(id) {
         appState.notifications = [];
     }
     
-    const notificationItem = document.querySelector(`.notification-item:nth-child(${id + 1})`);
+    const notificationItem = document.querySelector(`.notification-item[data-id="${id}"]`);
     if (notificationItem) {
         notificationItem.style.backgroundColor = '#f7fafc';
         notificationItem.style.fontWeight = 'normal';
     }
     
     // Update badge count
-    const unreadCount = appState.notifications.filter(n => !n.read).length - 1;
+    const unreadCount = appState.notifications.filter(n => n.id !== id).length;
     const badge = document.querySelector('.notification-badge');
     if (badge) {
         badge.textContent = unreadCount > 0 ? unreadCount : '';
@@ -402,8 +541,7 @@ function markNotificationAsRead(id) {
 
 // Initialize dashboard view
 function initDashboard() {
-    // View is already loaded, just need to set up event listeners if needed
-    console.log('Dashboard view initialized');
+    console.log('Initializing dashboard view');
 }
 
 // Load dashboard data
@@ -1281,9 +1419,7 @@ function renderTender(tender, tendersList) {
         <td>${tender.driver ? tender.driver : 'Unassigned'}</td>
         <td>
             <button class="btn btn-outline ${tender.status === 'available' ? 'assign-tender' : 'tender-details'}" 
-                data-id="${tender.id}" style="padding:5px 10px; font-size:14px;">
-                ${tender.status === 'available' ? 'Assign' : 'Details'}
-            </button>
+                data-id="${tender.id}" style="padding:5px 10px; font-size:14px;">${tender.status === 'available' ? 'Assign' : 'Details'}</button>
         </td>
     `;
     
@@ -2381,11 +2517,11 @@ function handleLogout() {
     appState.githubApi.headers.Authorization = '';
     
     // CRITICAL FIX: Properly switch views
-    document.getElementById('auth-view').classList.add('active');
-    document.getElementById('app-view').classList.remove('active');
+    if (authView) authView.classList.add('active');
+    if (appView) appView.classList.remove('active');
     
     // Clear content area
-    document.getElementById('content-area').innerHTML = '';
+    if (contentArea) contentArea.innerHTML = '';
 }
 
 // Initialize the app when DOM is loaded
