@@ -47,10 +47,12 @@ function initApp() {
     });
 
     // Notification dropdown
-    notificationBell.addEventListener('click', (e) => {
-        e.stopPropagation();
-        notificationDropdown.style.display = notificationDropdown.style.display === 'block' ? 'none' : 'block';
-    });
+    if (notificationBell) {
+        notificationBell.addEventListener('click', (e) => {
+            e.stopPropagation();
+            notificationDropdown.style.display = notificationDropdown.style.display === 'block' ? 'none' : 'block';
+        });
+    }
 
     // User dropdown
     userProfile.addEventListener('click', (e) => {
@@ -184,6 +186,8 @@ function loadData(view) {
 
 // Check authentication status
 function checkAuthStatus() {
+    console.log('Checking authentication status');
+    
     // Make sure notifications array is initialized
     if (!appState.notifications) {
         appState.notifications = [];
@@ -191,12 +195,14 @@ function checkAuthStatus() {
     
     // In a real implementation, we would check for stored credentials
     if (appState.isAuthenticated) {
+        console.log('User is authenticated');
         authView.classList.remove('active');
         appView.classList.add('active');
         
         // Load the dashboard view
         loadView(appState.currentView || 'dashboard');
     } else {
+        console.log('User is not authenticated');
         authView.classList.add('active');
         appView.classList.remove('active');
     }
@@ -204,6 +210,8 @@ function checkAuthStatus() {
 
 // Load initial data after login
 function loadInitialData() {
+    console.log('Loading initial data');
+    
     // Set current repository in admin view
     if (appState.repo) {
         const repoInput = document.getElementById('current-repo');
@@ -213,12 +221,14 @@ function loadInitialData() {
     // Load notifications
     loadNotifications();
     
-    // Load the current view
+    // Activate the current view (which will load its data)
     loadView(appState.currentView);
 }
 
 // Load notifications
 function loadNotifications() {
+    console.log('Loading notifications');
+    
     // Ensure appState.notifications is initialized
     if (!appState.notifications) {
         appState.notifications = [];
@@ -226,6 +236,7 @@ function loadNotifications() {
     
     const notificationList = document.getElementById('notification-dropdown');
     if (!notificationList) {
+        console.error('Notification dropdown not found');
         return;
     }
     
@@ -269,6 +280,8 @@ function loadNotifications() {
 
 // Mark notification as read
 function markNotificationAsRead(id) {
+    console.log(`Marking notification as read: ${id}`);
+    
     // Ensure notifications array is initialized
     if (!appState.notifications) {
         appState.notifications = [];
