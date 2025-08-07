@@ -1,0 +1,56 @@
+<div id="reports-view" class="view">
+    <div class="page-title">
+        <h1 class="title-text">Performance Reports</h1>
+        <div class="action-buttons">
+            <select class="form-control" id="report-period" style="width: auto;">
+                <option value="monthly">Monthly Report</option>
+                <option value="weekly">Weekly Report</option>
+                <option value="quarterly">Quarterly Report</option>
+            </select>
+            <button class="btn btn-primary" id="generate-report-btn">Generate Report</button>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <div class="card-title">Total Revenue</div>
+            <div class="card-value" id="revenue-value">$142,850</div>
+            <div class="card-change" id="revenue-change">↑ 12.4% from last month</div>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-title">Average Load Capacity</div>
+            <div class="card-value" id="load-capacity-value">86.7%</div>
+            <div class="card-change" id="load-capacity-change">↑ 3.2% from last month</div>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-title">On-Time Delivery Rate</div>
+            <div class="card-value" id="delivery-rate-value">92%</div>
+            <div class="card-change" id="delivery-rate-change">↑ 3% from last month</div>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-title">Driver Utilization</div>
+            <div class="card-value" id="utilization-value">78%</div>
+            <div class="card-change" id="utilization-change">↓ 2% from last month</div>
+        </div>
+    </div>
+
+    <div class="data-table-container">
+        <div class="table-header">
+            <h2 class="table-title">Driver Performance</h2>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Driver</th>
+                    <th>Tenders Completed</th>
+                    <th>On-Time Rate</th>
+                    <th>Avg. Revenue</th>
+                    <th>Capacity Utilization</th>
+                </tr>
+            </thead>
+            <tbody id="drivers-performance">
+                <!-- Performance data will be populated by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
