@@ -1,0 +1,36 @@
+<div id="chat-view" class="view">
+    <div class="page-title">
+        <h1 class="title-text">Internal Communication</h1>
+    </div>
+
+    <div class="chat-container">
+        <div class="chat-sidebar">
+            <div class="table-header">
+                <h2 class="table-title">Team Members</h2>
+            </div>
+            <div class="chat-users" id="chat-users-list">
+                <!-- Users will be populated by JavaScript -->
+            </div>
+        </div>
+        <div class="chat-main">
+            <div class="chat-header">
+                <div class="user-info">
+                    <div class="user-status"></div>
+                    <div class="user-details">
+                        <div class="user-name" id="chat-current-user">John Doe</div>
+                        <div class="user-role" id="chat-current-role">Administrator</div>
+                    </div>
+                </div>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                <!-- Messages will be populated by JavaScript -->
+            </div>
+            <div class="chat-input">
+                <input type="text" id="chat-input" placeholder="Type your message...">
+                <button id="chat-send-btn">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
