@@ -1,0 +1,40 @@
+<div id="invoices-view" class="view">
+    <div class="page-title">
+        <h1 class="title-text">Invoices Management</h1>
+        <div class="action-buttons">
+            <button class="btn btn-outline">Import</button>
+            <button class="btn btn-primary" id="add-invoice-btn">New Invoice</button>
+        </div>
+    </div>
+
+    <div class="data-table-container">
+        <div class="table-header">
+            <h2 class="table-title">Invoice Database</h2>
+            <div class="table-filters">
+                <select class="form-control" id="invoices-status-filter">
+                    <option value="all">All Statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="paid">Paid</option>
+                    <option value="unpaid">Unpaid</option>
+                    <option value="overdue">Overdue</option>
+                </select>
+            </div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Invoice #</th>
+                    <th>Client</th>
+                    <th>Issue Date</th>
+                    <th>Due Date</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Payment Terms</th>
+                </tr>
+            </thead>
+            <tbody id="invoices-list">
+                <!-- Invoices will be populated by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
