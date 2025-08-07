@@ -67,7 +67,7 @@ async function handleLogin() {
             appState.notifications = [];
         }
         
-        // Show the main application
+        // CRITICAL FIX: Properly switch views
         document.getElementById('auth-view').classList.remove('active');
         document.getElementById('app-view').classList.add('active');
         
@@ -110,10 +110,7 @@ async function handleRegistration() {
             appState.notifications = [];
         }
         
-        // Show success message
-        alert(`Repository created: ${appState.githubUsername}/${repoName}\nData structure initialized.`);
-        
-        // Show the main application
+        // CRITICAL FIX: Properly switch views
         document.getElementById('auth-view').classList.remove('active');
         document.getElementById('app-view').classList.add('active');
         
@@ -286,4 +283,23 @@ async function updateGitHubFile(owner, repo, token, path, content) {
     } catch (error) {
         throw new Error(`File update failed: ${error.message}`);
     }
+}
+
+// Logout functionality
+function handleLogout() {
+    appState.isAuthenticated = false;
+    appState.currentUser = null;
+    appState.token = null;
+    appState.repo = null;
+    appState.githubUsername = null;
+    
+    // Clear GitHub API headers
+    appState.githubApi.headers.Authorization = '';
+    
+    // CRITICAL FIX: Properly switch views
+    document.getElementById('auth-view').classList.add('active');
+    document.getElementById('app-view').classList.remove('active');
+    
+    // Clear content area
+    document.getElementById('content-area').innerHTML = '';
 }
