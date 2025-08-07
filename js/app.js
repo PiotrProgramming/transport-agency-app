@@ -156,7 +156,8 @@ const githubService = {
                 }
                 
                 if (!response.ok) {
-                    throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(`GitHub API error: ${response.status} ${response.statusText} - ${errorData.message || ''}`);
                 }
                 
                 return response;
@@ -250,7 +251,7 @@ function loadView(view) {
     fetch(`views/${view}.html`)
         .then(response => {
             if (!response.ok) {
-                throw new Error(`Failed to load ${view} view`);
+                throw new Error(`Failed to load ${view} view (HTTP ${response.status})`);
             }
             return response.text();
         })
@@ -273,9 +274,10 @@ function loadView(view) {
             console.error(error);
             if (contentArea) {
                 contentArea.innerHTML = `
-                    <div class="error-message" style="padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                        <h3 style="color: var(--dark-red); margin-bottom: 10px;">Error Loading View</h3>
-                        <p style="color: var(--secondary);">${error.message}</p>
+                    <div class="error-message">
+                        <h3>Error Loading View</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadView('${appState.currentView}')">Retry</button>
                     </div>
                 `;
             }
@@ -631,6 +633,12 @@ function initDrivers() {
 // Load drivers data
 async function loadDriversData() {
     const driversList = document.getElementById('drivers-list');
+    const loadingIndicator = document.getElementById('drivers-loading');
+    
+    if (loadingIndicator) {
+        loadingIndicator.style.display = 'flex';
+    }
+    
     if (!driversList) {
         console.error('Drivers list container not found');
         return;
@@ -643,6 +651,10 @@ async function loadDriversData() {
         // REAL DATABASE CALL - Fetch drivers from GitHub
         const drivers = await githubService.getFileContent('drivers.json');
         
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
+        }
+        
         // Render drivers
         drivers.forEach(driver => {
             renderDriver(driver, driversList);
@@ -651,10 +663,16 @@ async function loadDriversData() {
         console.log(`Successfully loaded ${drivers.length} drivers from database`);
     } catch (error) {
         console.error('Error loading drivers:', error);
+        
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
+        }
+        
         driversList.innerHTML = `
-            <div class="error-message" style="padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h3 style="color: var(--dark-red); margin-bottom: 10px;">Error Loading Drivers</h3>
-                <p style="color: var(--secondary);">${error.message}</p>
+            <div class="error-message">
+                <h3>Error Loading Drivers</h3>
+                <p>${error.message}</p>
+                <button class="btn btn-primary" onclick="loadDriversData()">Retry</button>
             </div>
         `;
     }
@@ -815,17 +833,31 @@ function initCars() {
 // Load cars data
 async function loadCarsData() {
     const carsList = document.getElementById('cars-list');
+    
     if (!carsList) {
         console.error('Cars list container not found');
         return;
     }
     
     // Clear existing content
-    carsList.innerHTML = '';
+    carsList.innerHTML = `
+        <tr>
+            <td colspan="8" class="text-center">
+                <div class="loading-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </td>
+        </tr>
+    `;
     
     try {
         // REAL DATABASE CALL - Fetch cars from GitHub
         const cars = await githubService.getFileContent('cars.json');
+        
+        // Clear loading indicator
+        carsList.innerHTML = '';
         
         // Render cars
         cars.forEach(car => {
@@ -837,8 +869,12 @@ async function loadCarsData() {
         console.error('Error loading cars:', error);
         carsList.innerHTML = `
             <tr>
-                <td colspan="8" style="text-align: center; padding: 20px; color: var(--dark-red);">
-                    Error loading cars: ${error.message}
+                <td colspan="8" class="text-center">
+                    <div class="error-message" style="width: 100%; margin: 0;">
+                        <h3>Error Loading Cars</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadCarsData()">Retry</button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -975,17 +1011,31 @@ function initCards() {
 // Load cards data
 async function loadCardsData() {
     const cardsList = document.getElementById('cards-list');
+    
     if (!cardsList) {
         console.error('Cards list container not found');
         return;
     }
     
     // Clear existing content
-    cardsList.innerHTML = '';
+    cardsList.innerHTML = `
+        <tr>
+            <td colspan="7" class="text-center">
+                <div class="loading-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </td>
+        </tr>
+    `;
     
     try {
         // REAL DATABASE CALL - Fetch cards from GitHub
         const cards = await githubService.getFileContent('cards.json');
+        
+        // Clear loading indicator
+        cardsList.innerHTML = '';
         
         // Render cards
         cards.forEach(card => {
@@ -1000,8 +1050,12 @@ async function loadCardsData() {
         console.error('Error loading cards:', error);
         cardsList.innerHTML = `
             <tr>
-                <td colspan="7" style="text-align: center; padding: 20px; color: var(--dark-red);">
-                    Error loading cards: ${error.message}
+                <td colspan="7" class="text-center">
+                    <div class="error-message" style="width: 100%; margin: 0;">
+                        <h3>Error Loading Cards</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadCardsData()">Retry</button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -1346,17 +1400,31 @@ function initTenders() {
 // Load tenders data
 async function loadTendersData() {
     const tendersList = document.getElementById('tenders-list');
+    
     if (!tendersList) {
         console.error('Tenders list container not found');
         return;
     }
     
     // Clear existing content
-    tendersList.innerHTML = '';
+    tendersList.innerHTML = `
+        <tr>
+            <td colspan="8" class="text-center">
+                <div class="loading-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </td>
+        </tr>
+    `;
     
     try {
         // REAL DATABASE CALL - Fetch tenders from GitHub
         const tenders = await githubService.getFileContent('tenders.json');
+        
+        // Clear loading indicator
+        tendersList.innerHTML = '';
         
         // Render tenders
         tenders.forEach(tender => {
@@ -1368,8 +1436,12 @@ async function loadTendersData() {
         console.error('Error loading tenders:', error);
         tendersList.innerHTML = `
             <tr>
-                <td colspan="8" style="text-align: center; padding: 20px; color: var(--dark-red);">
-                    Error loading tenders: ${error.message}
+                <td colspan="8" class="text-center">
+                    <div class="error-message" style="width: 100%; margin: 0;">
+                        <h3>Error Loading Tenders</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadTendersData()">Retry</button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -1612,17 +1684,31 @@ function initInvoices() {
 // Load invoices data
 async function loadInvoicesData() {
     const invoicesList = document.getElementById('invoices-list');
+    
     if (!invoicesList) {
         console.error('Invoices list container not found');
         return;
     }
     
     // Clear existing content
-    invoicesList.innerHTML = '';
+    invoicesList.innerHTML = `
+        <tr>
+            <td colspan="7" class="text-center">
+                <div class="loading-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </td>
+        </tr>
+    `;
     
     try {
         // REAL DATABASE CALL - Fetch invoices from GitHub
         const invoices = await githubService.getFileContent('invoices.json');
+        
+        // Clear loading indicator
+        invoicesList.innerHTML = '';
         
         // Render invoices
         invoices.forEach(invoice => {
@@ -1634,8 +1720,12 @@ async function loadInvoicesData() {
         console.error('Error loading invoices:', error);
         invoicesList.innerHTML = `
             <tr>
-                <td colspan="7" style="text-align: center; padding: 20px; color: var(--dark-red);">
-                    Error loading invoices: ${error.message}
+                <td colspan="7" class="text-center">
+                    <div class="error-message" style="width: 100%; margin: 0;">
+                        <h3>Error Loading Invoices</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadInvoicesData()">Retry</button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -1836,7 +1926,17 @@ async function loadDriverPerformance() {
     if (!performanceTable) return;
     
     // Clear existing content
-    performanceTable.innerHTML = '';
+    performanceTable.innerHTML = `
+        <tr>
+            <td colspan="5" class="text-center">
+                <div class="loading-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </td>
+        </tr>
+    `;
     
     try {
         // REAL DATABASE CALL - Fetch data from GitHub
@@ -1844,6 +1944,9 @@ async function loadDriverPerformance() {
             githubService.getFileContent('drivers.json'),
             githubService.getFileContent('tenders.json')
         ]);
+        
+        // Clear loading indicator
+        performanceTable.innerHTML = '';
         
         // Calculate performance data for each driver
         const performanceData = drivers.map(driver => {
@@ -1884,8 +1987,12 @@ async function loadDriverPerformance() {
         console.error('Error loading driver performance:', error);
         performanceTable.innerHTML = `
             <tr>
-                <td colspan="5" style="text-align: center; padding: 20px; color: var(--dark-red);">
-                    Error loading performance data: ${error.message}
+                <td colspan="5" class="text-center">
+                    <div class="error-message" style="width: 100%; margin: 0;">
+                        <h3>Error Loading Performance Data</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadDriverPerformance()">Retry</button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -1941,17 +2048,31 @@ async function loadAdminData() {
 // Load users data
 async function loadUsersData() {
     const usersList = document.getElementById('users-list');
+    
     if (!usersList) {
         console.error('Users list container not found');
         return;
     }
     
     // Clear existing content
-    usersList.innerHTML = '';
+    usersList.innerHTML = `
+        <tr>
+            <td colspan="6" class="text-center">
+                <div class="loading-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </td>
+        </tr>
+    `;
     
     try {
         // REAL DATABASE CALL - Fetch users from GitHub
         const users = await githubService.getFileContent('users.json');
+        
+        // Clear loading indicator
+        usersList.innerHTML = '';
         
         // Render users
         users.forEach(user => {
@@ -1963,8 +2084,12 @@ async function loadUsersData() {
         console.error('Error loading users:', error);
         usersList.innerHTML = `
             <tr>
-                <td colspan="6" style="text-align: center; padding: 20px; color: var(--dark-red);">
-                    Error loading users: ${error.message}
+                <td colspan="6" class="text-center">
+                    <div class="error-message" style="width: 100%; margin: 0;">
+                        <h3>Error Loading Users</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadUsersData()">Retry</button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -2103,14 +2228,28 @@ async function editUser(user) {
 // Load statuses data
 async function loadStatusesData() {
     const statusesList = document.getElementById('statuses-list');
+    
     if (!statusesList) return;
     
     // Clear existing content
-    statusesList.innerHTML = '';
+    statusesList.innerHTML = `
+        <tr>
+            <td colspan="4" class="text-center">
+                <div class="loading-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </td>
+        </tr>
+    `;
     
     try {
         // REAL DATABASE CALL - Fetch statuses from GitHub
         const statuses = await githubService.getFileContent('statuses.json');
+        
+        // Clear loading indicator
+        statusesList.innerHTML = '';
         
         // Render statuses
         statuses.forEach(status => {
@@ -2122,8 +2261,12 @@ async function loadStatusesData() {
         console.error('Error loading statuses:', error);
         statusesList.innerHTML = `
             <tr>
-                <td colspan="4" style="text-align: center; padding: 20px; color: var(--dark-red);">
-                    Error loading statuses: ${error.message}
+                <td colspan="4" class="text-center">
+                    <div class="error-message" style="width: 100%; margin: 0;">
+                        <h3>Error Loading Statuses</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadStatusesData()">Retry</button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -2295,11 +2438,20 @@ async function loadChatData() {
     }
     
     // Clear existing content
-    chatUsersList.innerHTML = '';
+    chatUsersList.innerHTML = `
+        <div class="loading-indicator" style="height: 100px;">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    `;
     
     try {
         // REAL DATABASE CALL - Fetch users from GitHub
         const users = await githubService.getFileContent('users.json');
+        
+        // Clear loading indicator
+        chatUsersList.innerHTML = '';
         
         // Render users
         users.forEach(user => {
@@ -2323,11 +2475,12 @@ async function loadChatData() {
             loadMessagesForUser(users[0], chatMessages);
         }
     } catch (error) {
-        console.error('Error loading chat data:', error);
+        console.error('Error loading chat ', error);
         chatUsersList.innerHTML = `
-            <div class="error-message" style="padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h3 style="color: var(--dark-red); margin-bottom: 10px;">Error Loading Chat</h3>
-                <p style="color: var(--secondary);">${error.message}</p>
+            <div class="error-message">
+                <h3>Error Loading Chat</h3>
+                <p>${error.message}</p>
+                <button class="btn btn-primary" onclick="loadChatData()">Retry</button>
             </div>
         `;
     }
@@ -2392,12 +2545,23 @@ async function loadMessagesForUser(user, chatMessages = document.getElementById(
     
     // Clear existing messages
     if (chatMessages) {
-        chatMessages.innerHTML = '';
+        chatMessages.innerHTML = `
+            <div class="loading-indicator" style="height: 100px; margin: 20px 0;">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        `;
     }
     
     try {
         // REAL DATABASE CALL - Fetch messages from GitHub
         const messages = await githubService.getFileContent('chat/messages.json');
+        
+        // Clear loading indicator
+        if (chatMessages) {
+            chatMessages.innerHTML = '';
+        }
         
         // Filter messages for this user
         const userMessages = messages.filter(m => 
@@ -2417,9 +2581,10 @@ async function loadMessagesForUser(user, chatMessages = document.getElementById(
         console.error('Error loading messages:', error);
         if (chatMessages) {
             chatMessages.innerHTML = `
-                <div class="error-message" style="padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <h3 style="color: var(--dark-red); margin-bottom: 10px;">Error Loading Messages</h3>
-                    <p style="color: var(--secondary);">${error.message}</p>
+                <div class="error-message">
+                    <h3>Error Loading Messages</h3>
+                    <p>${error.message}</p>
+                    <button class="btn btn-primary" onclick="loadMessagesForUser(${JSON.stringify(user)})">Retry</button>
                 </div>
             `;
         }
