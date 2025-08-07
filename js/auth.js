@@ -28,6 +28,12 @@ function initAuth() {
     if (registerBtn) {
         registerBtn.addEventListener('click', handleRegistration);
     }
+    
+    // Logout button
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+    }
 }
 
 // Handle login
@@ -280,28 +286,4 @@ async function updateGitHubFile(owner, repo, token, path, content) {
     } catch (error) {
         throw new Error(`File update failed: ${error.message}`);
     }
-}
-
-// Logout functionality
-function handleLogout() {
-    appState.isAuthenticated = false;
-    appState.currentUser = null;
-    appState.token = null;
-    appState.repo = null;
-    appState.githubUsername = null;
-    
-    // Clear GitHub API headers
-    appState.githubApi.headers.Authorization = '';
-    
-    // Show login view
-    document.getElementById('auth-view').classList.add('active');
-    document.getElementById('app-view').classList.remove('active');
-}
-
-// Initialize auth when DOM is loaded
-document.addEventListener('DOMContentLoaded', initAuth);
-
-// Attach logout handler
-if (logoutBtn) {
-    logoutBtn.addEventListener('click', handleLogout);
 }
