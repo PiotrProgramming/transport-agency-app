@@ -1,0 +1,62 @@
+<div id="dashboard-view" class="view active">
+    <div class="page-title">
+        <h1 class="title-text">Dashboard Overview</h1>
+        <div class="action-buttons">
+            <button class="btn btn-outline">Export Report</button>
+            <button class="btn btn-primary">New Tender</button>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <div class="card-title">Active Drivers</div>
+            <div class="card-value">24</div>
+            <div class="card-change positive">↑ 2 from last week</div>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-title">On-Time Deliveries</div>
+            <div class="card-value">92%</div>
+            <div class="card-change positive">↑ 3% from last month</div>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-title">Revenue (Monthly)</div>
+            <div class="card-value">$142,850</div>
+            <div class="card-change positive">↑ $12,450 from last month</div>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-title">Pending Invoices</div>
+            <div class="card-value">8</div>
+            <div class="card-change negative">↓ 2 from last week</div>
+        </div>
+    </div>
+
+    <div class="data-table-container">
+        <div class="table-header">
+            <h2 class="table-title">Recent Tenders</h2>
+            <div class="table-filters">
+                <select class="form-control">
+                    <option>All Statuses</option>
+                    <option>Pending</option>
+                    <option>Delivered</option>
+                    <option>Cancelled</option>
+                </select>
+            </div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Tender ID</th>
+                    <th>Route</th>
+                    <th>Loading Date</th>
+                    <th>Unloading Date</th>
+                    <th>Price</th>
+                    <th>Status</th>
+                    <th>Driver</th>
+                </tr>
+            </thead>
+            <tbody id="dashboard-tenders">
+                <!-- Tenders will be populated by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
