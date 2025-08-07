@@ -1,12 +1,5 @@
 // Initialize notifications
 function initNotifications() {
-    console.log('Initializing notifications');
-    
-    // Ensure appState.notifications is initialized
-    if (!appState.notifications) {
-        appState.notifications = [];
-    }
-    
     // In a real implementation, we would set up event listeners for notification actions
     setupNotificationActions();
     
@@ -28,8 +21,6 @@ function setupNotificationActions() {
 
 // Check for new notifications
 function checkForNotifications() {
-    console.log('Checking for notifications');
-    
     // Ensure appState.notifications is initialized
     if (!appState.notifications) {
         appState.notifications = [];
@@ -72,8 +63,6 @@ function checkForNotifications() {
 
 // Add a new notification
 function addNotification(notification) {
-    console.log('Adding notification:', notification);
-    
     // Ensure appState.notifications is initialized
     if (!appState.notifications) {
         appState.notifications = [];
@@ -97,8 +86,6 @@ function addNotification(notification) {
 
 // Update notification UI
 function updateNotificationUI() {
-    console.log('Updating notification UI');
-    
     // Ensure appState.notifications is initialized
     if (!appState.notifications) {
         appState.notifications = [];
@@ -140,8 +127,6 @@ function updateNotificationUI() {
 
 // Mark notification as read
 function markNotificationAsRead(id) {
-    console.log(`Marking notification as read: ${id}`);
-    
     // Ensure notifications array is initialized
     if (!appState.notifications) {
         appState.notifications = [];
