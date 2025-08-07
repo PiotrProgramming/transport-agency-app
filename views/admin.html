@@ -1,0 +1,71 @@
+<div id="admin-view" class="view">
+    <div class="page-title">
+        <h1 class="title-text">Administration</h1>
+        <div class="action-buttons">
+            <button class="btn btn-outline">Export Data</button>
+            <button class="btn btn-primary" id="add-user-btn">New User</button>
+        </div>
+    </div>
+
+    <div class="data-table-container">
+        <div class="table-header">
+            <h2 class="table-title">User Management</h2>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Supervisor</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="users-list">
+                <!-- Users will be populated by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="data-table-container" style="margin-top: 30px;">
+        <div class="table-header">
+            <h2 class="table-title">Status Management</h2>
+            <button class="btn btn-primary" id="add-status-btn" style="padding: 5px 15px; height: auto;">Add Status</button>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Module</th>
+                    <th>Status Name</th>
+                    <th>Color</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="statuses-list">
+                <!-- Statuses will be populated by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="data-table-container" style="margin-top: 30px;">
+        <div class="table-header">
+            <h2 class="table-title">Repository Management</h2>
+        </div>
+        <div class="form-container">
+            <div class="form-group">
+                <label class="form-label">Current Repository</label>
+                <input type="text" class="form-control" id="current-repo" readonly>
+            </div>
+            <div class="form-group">
+                <label class="form-label">New GitHub Token</label>
+                <input type="password" class="form-control" id="new-token" placeholder="ghp_...">
+            </div>
+            <div class="form-group">
+                <label class="form-label">New Repository Name (owner/repo)</label>
+                <input type="text" class="form-control" id="new-repo" placeholder="company/transport-data">
+            </div>
+            <button class="btn btn-primary" id="migrate-repo-btn">Migrate Repository</button>
+        </div>
+    </div>
+</div>
