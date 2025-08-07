@@ -1,0 +1,42 @@
+<div id="tenders-view" class="view">
+    <div class="page-title">
+        <h1 class="title-text">Tenders Management</h1>
+        <div class="action-buttons">
+            <button class="btn btn-outline">Import</button>
+            <button class="btn btn-primary" id="add-tender-btn">New Tender</button>
+        </div>
+    </div>
+
+    <div class="data-table-container">
+        <div class="table-header">
+            <h2 class="table-title">Tender Database</h2>
+            <div class="table-filters">
+                <select class="form-control" id="tenders-status-filter">
+                    <option value="all">All Statuses</option>
+                    <option value="unassigned">Unassigned</option>
+                    <option value="pending">Pending</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="sold">Sold</option>
+                </select>
+            </div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Tender ID</th>
+                    <th>Route</th>
+                    <th>Loading Date</th>
+                    <th>Unloading Date</th>
+                    <th>Price</th>
+                    <th>Status</th>
+                    <th>Driver</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="tenders-list">
+                <!-- Tenders will be populated by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
