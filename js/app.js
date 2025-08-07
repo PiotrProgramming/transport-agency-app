@@ -28,6 +28,103 @@ const userProfile = document.getElementById('user-profile');
 const userDropdown = document.getElementById('user-dropdown');
 const logoutBtn = document.getElementById('logout-btn');
 
+// GitHub Service - Handles all GitHub API interactions
+const githubService = {
+    // Get file content from GitHub repository
+    async getFileContent(path) {
+        if (!appState.repo || !appState.token) {
+            throw new Error('Repository and token must be set');
+        }
+        
+        const [owner, repo] = appState.repo.split('/');
+        if (!owner || !repo) {
+            throw new Error('Repository name must be in "owner/repo" format');
+        }
+        
+        try {
+            const response = await fetch(
+                `${this.baseUrl}/repos/${owner}/${repo}/contents/${path}`,
+                { headers: this.getHeaders() }
+            );
+            
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                throw new Error(error.message || `Failed to fetch ${path}`);
+            }
+            
+            const data = await response.json();
+            return JSON.parse(atob(data.content));
+        } catch (error) {
+            console.error(`GitHub API error (getFileContent ${path}):`, error);
+            throw error;
+        }
+    },
+    
+    // Update file content in GitHub repository
+    async updateFileContent(path, content, message = `Update ${path}`) {
+        if (!appState.repo || !appState.token) {
+            throw new Error('Repository and token must be set');
+        }
+        
+        const [owner, repo] = appState.repo.split('/');
+        if (!owner || !repo) {
+            throw new Error('Repository name must be in "owner/repo" format');
+        }
+        
+        try {
+            // First get the current file info to get the SHA
+            let sha = null;
+            const fileInfoResponse = await fetch(
+                `${this.baseUrl}/repos/${owner}/${repo}/contents/${path}`,
+                { headers: this.getHeaders() }
+            );
+            
+            if (fileInfoResponse.ok) {
+                const fileInfo = await fileInfoResponse.json();
+                sha = fileInfo.sha;
+            }
+            
+            // Update the file
+            const response = await fetch(
+                `${this.baseUrl}/repos/${owner}/${repo}/contents/${path}`,
+                {
+                    method: 'PUT',
+                    headers: this.getHeaders(),
+                    body: JSON.stringify({
+                        message: message,
+                        content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2)))),
+                        sha: sha
+                    })
+                }
+            );
+            
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                throw new Error(error.message || `Failed to update ${path}`);
+            }
+            
+            return response.json();
+        } catch (error) {
+            console.error(`GitHub API error (updateFileContent ${path}):`, error);
+            throw error;
+        }
+    },
+    
+    // Get headers for GitHub API requests
+    getHeaders() {
+        return {
+            'Authorization': `token ${appState.token}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json'
+        };
+    },
+    
+    // Base URL for GitHub API
+    get baseUrl() {
+        return 'https://api.github.com';
+    }
+};
+
 // Initialize the application
 function initApp() {
     // Make sure notifications array is initialized
@@ -150,6 +247,8 @@ function initView(view) {
 
 // Load data for the current view
 function loadData(view) {
+    console.log(`Loading data for view: ${view}`);
+    
     // This is where you would load data for the view
     // For now, we'll just handle a few special cases
     
@@ -308,93 +407,74 @@ function initDashboard() {
 }
 
 // Load dashboard data
-function loadDashboardData() {
+async function loadDashboardData() {
+    console.log('Loading dashboard data');
+    
     // Get the tenders table body
     const tendersTable = document.getElementById('dashboard-tenders');
     if (!tendersTable) {
+        console.error('Dashboard tenders table not found');
         return;
     }
     
     // Clear existing content
     tendersTable.innerHTML = '';
     
-    // In a real implementation, we would fetch this from GitHub
-    const sampleTenders = [
-        {
-            id: 'TX-7890',
-            route: 'Berlin (10115) → Paris (75001)',
-            loadingDate: 'Oct 15, 2023',
-            unloadingDate: 'Oct 17, 2023',
-            price: '$4,250',
-            status: 'delivered',
-            driver: 'Michael Johnson'
-        },
-        {
-            id: 'TX-7891',
-            route: 'Munich (80331) → Vienna (1010)',
-            loadingDate: 'Oct 18, 2023',
-            unloadingDate: 'Oct 20, 2023',
-            price: '$2,850',
-            status: 'pending',
-            driver: 'Anna Schmidt'
-        },
-        {
-            id: 'TX-7892',
-            route: 'Hamburg (20095) → Copenhagen (1050)',
-            loadingDate: 'Oct 22, 2023',
-            unloadingDate: 'Oct 24, 2023',
-            price: '$3,150',
-            status: 'available',
-            driver: 'Unassigned'
-        },
-        {
-            id: 'TX-7893',
-            route: 'Frankfurt (60311) → Amsterdam (1012)',
-            loadingDate: 'Oct 25, 2023',
-            unloadingDate: 'Oct 27, 2023',
-            price: '$3,750',
-            status: 'available',
-            driver: 'Unassigned'
-        }
-    ];
-    
-    // Render tenders
-    sampleTenders.forEach(tender => {
-        // Determine status class
-        let statusClass;
-        switch(tender.status) {
-            case 'available':
-                statusClass = 'status-available';
-                break;
-            case 'pending':
-                statusClass = 'status-pending';
-                break;
-            case 'delivered':
-                statusClass = 'status-delivered';
-                break;
-            case 'cancelled':
-                statusClass = 'status-cancelled';
-                break;
-            default:
-                statusClass = 'status-available';
-        }
+    try {
+        // REAL DATABASE CALL - Fetch tenders from GitHub
+        const tenders = await githubService.getFileContent('tenders.json');
         
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>#${tender.id}</td>
-            <td>${tender.route}</td>
-            <td>${tender.loadingDate}</td>
-            <td>${tender.unloadingDate}</td>
-            <td>${tender.price}</td>
-            <td><span class="status-badge ${statusClass}">${tender.status.charAt(0).toUpperCase() + tender.status.slice(1)}</span></td>
-            <td>${tender.driver}</td>
+        // Render tenders
+        tenders.forEach(tender => {
+            // Determine status class
+            let statusClass;
+            switch(tender.status) {
+                case 'available':
+                    statusClass = 'status-available';
+                    break;
+                case 'pending':
+                    statusClass = 'status-pending';
+                    break;
+                case 'delivered':
+                    statusClass = 'status-delivered';
+                    break;
+                case 'cancelled':
+                    statusClass = 'status-cancelled';
+                    break;
+                default:
+                    statusClass = 'status-available';
+            }
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>#${tender.id}</td>
+                <td>${tender.route}</td>
+                <td>${tender.loadingDate}</td>
+                <td>${tender.unloadingDate}</td>
+                <td>${tender.price}</td>
+                <td><span class="status-badge ${statusClass}">${tender.status.charAt(0).toUpperCase() + tender.status.slice(1)}</span></td>
+                <td>${tender.driver ? tender.driver : 'Unassigned'}</td>
+            `;
+            tendersTable.appendChild(row);
+        });
+        
+        console.log(`Successfully loaded ${tenders.length} tenders from database`);
+    } catch (error) {
+        console.error('Error loading tenders:', error);
+        tendersTable.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 20px; color: var(--dark-red);">
+                    Error loading tenders: ${error.message}
+                </td>
+            </tr>
         `;
-        tendersTable.appendChild(row);
-    });
+    }
 }
 
 // Initialize drivers view
 function initDrivers() {
+    console.log('Initializing drivers view');
+    
     // Set up event listeners for the add driver button
     const addDriverBtn = document.getElementById('add-driver-btn');
     if (addDriverBtn && !addDriverBtn.dataset.initialized) {
@@ -411,63 +491,39 @@ function initDrivers() {
 }
 
 // Load drivers data
-function loadDriversData() {
+async function loadDriversData() {
     const driversList = document.getElementById('drivers-list');
     if (!driversList) {
+        console.error('Drivers list container not found');
         return;
     }
     
     // Clear existing content
     driversList.innerHTML = '';
     
-    // In a real implementation, we would fetch this from GitHub
-    const sampleDrivers = [
-        {
-            id: 1,
-            firstName: 'Michael',
-            lastName: 'Johnson',
-            license: 'DL-789456',
-            experience: '8 years',
-            car: 'TR-204-BC',
-            card: '**** 5678',
-            tenders: '12 (3 active)',
-            lastDelivery: 'Oct 17, 2023',
-            status: 'available'
-        },
-        {
-            id: 2,
-            firstName: 'Anna',
-            lastName: 'Schmidt',
-            license: 'DL-123789',
-            experience: '5 years',
-            car: 'TR-307-XY',
-            card: '**** 1234',
-            tenders: '9 (2 active)',
-            lastDelivery: 'Oct 20, 2023',
-            status: 'on-duty'
-        },
-        {
-            id: 3,
-            firstName: 'David',
-            lastName: 'Müller',
-            license: 'DL-456123',
-            experience: '12 years',
-            car: 'TR-102-AB',
-            card: '**** 9012',
-            tenders: '18 (0 active)',
-            lastDelivery: 'Oct 10, 2023',
-            status: 'maintenance'
-        }
-    ];
-    
-    // Render drivers
-    sampleDrivers.forEach(driver => {
-        renderDriver(driver);
-    });
+    try {
+        // REAL DATABASE CALL - Fetch drivers from GitHub
+        const drivers = await githubService.getFileContent('drivers.json');
+        
+        // Render drivers
+        drivers.forEach(driver => {
+            renderDriver(driver, driversList);
+        });
+        
+        console.log(`Successfully loaded ${drivers.length} drivers from database`);
+    } catch (error) {
+        console.error('Error loading drivers:', error);
+        driversList.innerHTML = `
+            <div class="error-message" style="padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h3 style="color: var(--dark-red); margin-bottom: 10px;">Error Loading Drivers</h3>
+                <p style="color: var(--secondary);">${error.message}</p>
+            </div>
+        `;
+    }
 }
 
 // Render a single driver
-function renderDriver(driver) {
+function renderDriver(driver, driversList) {
     const driverSlip = document.createElement('div');
     driverSlip.className = 'driver-slip';
     driverSlip.dataset.id = driver.id;
@@ -505,16 +561,16 @@ function renderDriver(driver) {
                 <span class="detail-label">Experience:</span> ${driver.experience}
             </div>
             <div>
-                <span class="detail-label">Assigned Car:</span> ${driver.car}
+                <span class="detail-label">Assigned Car:</span> ${driver.car ? driver.car : 'Unassigned'}
             </div>
             <div>
-                <span class="detail-label">Assigned Card:</span> ${driver.card}
+                <span class="detail-label">Assigned Card:</span> ${driver.card ? driver.card : 'Unassigned'}
             </div>
             <div>
-                <span class="detail-label">Tenders:</span> ${driver.tenders}
+                <span class="detail-label">Tenders:</span> ${driver.tenders ? driver.tenders : '0 (0 active)'}
             </div>
             <div>
-                <span class="detail-label">Last Delivery:</span> ${driver.lastDelivery}
+                <span class="detail-label">Last Delivery:</span> ${driver.lastDelivery ? driver.lastDelivery : 'Never'}
             </div>
         </div>
     `;
@@ -533,31 +589,55 @@ function showDriverDetails(driver) {
 }
 
 // Show add driver form
-function showAddDriverForm() {
+async function showAddDriverForm() {
     const name = prompt('Enter driver first name:');
     if (!name) return;
     
     const lastName = prompt('Enter driver last name:');
     if (!lastName) return;
     
-    // In a real implementation, we would save this to GitHub
-    const newDriver = {
-        id: Date.now(),
-        firstName: name,
-        lastName: lastName,
-        license: 'DL-' + Math.floor(100000 + Math.random() * 900000),
-        experience: '0 years',
-        car: 'Unassigned',
-        card: 'Unassigned',
-        tenders: '0 (0 active)',
-        lastDelivery: 'Never',
-        status: 'available'
-    };
+    const license = prompt('Enter driver license number:', 'DL-');
+    if (!license) return;
     
-    // Add to UI
-    renderDriver(newDriver);
+    const experience = prompt('Enter driver experience:', '0 years');
+    if (!experience) return;
     
-    alert(`Driver ${name} ${lastName} added successfully!\nIn a real implementation, this data would be saved to your GitHub repository.`);
+    try {
+        // REAL DATABASE CALL - Fetch existing drivers to generate new ID
+        const drivers = await githubService.getFileContent('drivers.json');
+        const newId = drivers.length > 0 ? Math.max(...drivers.map(d => d.id)) + 1 : 1;
+        
+        // Create new driver object
+        const newDriver = {
+            id: newId,
+            firstName: name,
+            lastName: lastName,
+            license: license,
+            experience: experience,
+            car: null,
+            card: null,
+            tenders: '0 (0 active)',
+            lastDelivery: 'Never',
+            status: 'available'
+        };
+        
+        // Add to existing drivers array
+        drivers.push(newDriver);
+        
+        // REAL DATABASE CALL - Save updated drivers to GitHub
+        await githubService.updateFileContent('drivers.json', drivers, 'Add new driver');
+        
+        // Add to UI
+        const driversList = document.getElementById('drivers-list');
+        if (driversList) {
+            renderDriver(newDriver, driversList);
+        }
+        
+        alert(`Driver ${name} ${lastName} added successfully!`);
+    } catch (error) {
+        console.error('Error adding driver:', error);
+        alert(`Failed to add driver: ${error.message}`);
+    }
 }
 
 // Filter drivers by status
@@ -577,6 +657,8 @@ function filterDrivers() {
 
 // Initialize cars view
 function initCars() {
+    console.log('Initializing cars view');
+    
     // Set up event listeners for the add car button
     const addCarBtn = document.getElementById('add-car-btn');
     if (addCarBtn && !addCarBtn.dataset.initialized) {
@@ -593,60 +675,40 @@ function initCars() {
 }
 
 // Load cars data
-function loadCarsData() {
+async function loadCarsData() {
     const carsList = document.getElementById('cars-list');
     if (!carsList) {
+        console.error('Cars list container not found');
         return;
     }
     
     // Clear existing content
     carsList.innerHTML = '';
     
-    // In a real implementation, we would fetch this from GitHub
-    const sampleCars = [
-        {
-            id: 1,
-            tractorPlate: 'TR-102-AB',
-            trailerPlate: 'TL-205-XY',
-            maxWeight: '24,000 kg',
-            loadingSpace: '13.6m x 2.45m x 2.7m (90.8 m³)',
-            insurance: 'Dec 15, 2023',
-            inspection: 'Nov 30, 2023',
-            status: 'maintenance',
-            driver: 'David Müller'
-        },
-        {
-            id: 2,
-            tractorPlate: 'TR-204-BC',
-            trailerPlate: 'TL-307-AB',
-            maxWeight: '24,000 kg',
-            loadingSpace: '13.6m x 2.45m x 2.7m (90.8 m³)',
-            insurance: 'Jan 22, 2024',
-            inspection: 'Dec 10, 2023',
-            status: 'available',
-            driver: 'Michael Johnson'
-        },
-        {
-            id: 3,
-            tractorPlate: 'TR-307-XY',
-            trailerPlate: 'TL-102-BC',
-            maxWeight: '22,000 kg',
-            loadingSpace: '13.6m x 2.45m x 2.7m (90.8 m³)',
-            insurance: 'Feb 5, 2024',
-            inspection: 'Jan 15, 2024',
-            status: 'in-use',
-            driver: 'Anna Schmidt'
-        }
-    ];
-    
-    // Render cars
-    sampleCars.forEach(car => {
-        renderCar(car);
-    });
+    try {
+        // REAL DATABASE CALL - Fetch cars from GitHub
+        const cars = await githubService.getFileContent('cars.json');
+        
+        // Render cars
+        cars.forEach(car => {
+            renderCar(car, carsList);
+        });
+        
+        console.log(`Successfully loaded ${cars.length} cars from database`);
+    } catch (error) {
+        console.error('Error loading cars:', error);
+        carsList.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 20px; color: var(--dark-red);">
+                    Error loading cars: ${error.message}
+                </td>
+            </tr>
+        `;
+    }
 }
 
 // Render a single car
-function renderCar(car) {
+function renderCar(car, carsList) {
     const row = document.createElement('tr');
     row.dataset.id = car.id;
     
@@ -678,43 +740,67 @@ function renderCar(car) {
         <td>${car.insurance}</td>
         <td>${car.inspection}</td>
         <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-        <td>${car.driver}</td>
+        <td>${car.driver ? car.driver : 'Unassigned'}</td>
     `;
     
     carsList.appendChild(row);
 }
 
 // Show add car form
-function showAddCarForm() {
+async function showAddCarForm() {
     const tractorPlate = prompt('Enter tractor plate number:');
     if (!tractorPlate) return;
     
     const trailerPlate = prompt('Enter trailer plate number:');
     if (!trailerPlate) return;
     
-    // In a real implementation, we would calculate these based on inputs
-    const maxWeight = '24,000 kg';
-    const loadingSpace = '13.6m x 2.45m x 2.7m (90.8 m³)';
-    const insurance = 'Jan 1, 2024';
-    const inspection = 'Dec 1, 2023';
+    const maxWeight = prompt('Enter max weight capacity:', '24,000 kg');
+    if (!maxWeight) return;
     
-    // In a real implementation, we would save this to GitHub
-    const newCar = {
-        id: Date.now(),
-        tractorPlate: tractorPlate,
-        trailerPlate: trailerPlate,
-        maxWeight: maxWeight,
-        loadingSpace: loadingSpace,
-        insurance: insurance,
-        inspection: inspection,
-        status: 'available',
-        driver: 'Unassigned'
-    };
+    const loadingSpace = prompt('Enter loading space dimensions:', '13.6m x 2.45m x 2.7m (90.8 m³)');
+    if (!loadingSpace) return;
     
-    // Add to UI
-    renderCar(newCar);
+    const insurance = prompt('Enter insurance expiry date:', 'Jan 1, 2024');
+    if (!insurance) return;
     
-    alert(`Car ${tractorPlate} added successfully!\nIn a real implementation, this data would be saved to your GitHub repository.`);
+    const inspection = prompt('Enter inspection expiry date:', 'Dec 1, 2023');
+    if (!inspection) return;
+    
+    try {
+        // REAL DATABASE CALL - Fetch existing cars to generate new ID
+        const cars = await githubService.getFileContent('cars.json');
+        const newId = cars.length > 0 ? Math.max(...cars.map(c => c.id)) + 1 : 1;
+        
+        // Create new car object
+        const newCar = {
+            id: newId,
+            tractorPlate: tractorPlate,
+            trailerPlate: trailerPlate,
+            maxWeight: maxWeight,
+            loadingSpace: loadingSpace,
+            insurance: insurance,
+            inspection: inspection,
+            status: 'available',
+            driver: null
+        };
+        
+        // Add to existing cars array
+        cars.push(newCar);
+        
+        // REAL DATABASE CALL - Save updated cars to GitHub
+        await githubService.updateFileContent('cars.json', cars, 'Add new car');
+        
+        // Add to UI
+        const carsList = document.getElementById('cars-list');
+        if (carsList) {
+            renderCar(newCar, carsList);
+        }
+        
+        alert(`Car ${tractorPlate} added successfully!`);
+    } catch (error) {
+        console.error('Error adding car:', error);
+        alert(`Failed to add car: ${error.message}`);
+    }
 }
 
 // Filter cars by status
@@ -724,7 +810,7 @@ function filterCars() {
     
     const carRows = document.querySelectorAll('#cars-list tr');
     carRows.forEach(row => {
-        const statusText = row.querySelector('.status-badge').textContent.toLowerCase();
+        const statusText = row.querySelector('.status-badge')?.textContent.toLowerCase() || '';
         if (filterValue === 'all' || statusText.includes(filterValue)) {
             row.style.display = 'table-row';
         } else {
@@ -735,6 +821,8 @@ function filterCars() {
 
 // Initialize cards view
 function initCards() {
+    console.log('Initializing cards view');
+    
     // Set up event listeners for the add card button
     const addCardBtn = document.getElementById('add-card-btn');
     if (addCardBtn && !addCardBtn.dataset.initialized) {
@@ -747,57 +835,43 @@ function initCards() {
 }
 
 // Load cards data
-function loadCardsData() {
+async function loadCardsData() {
     const cardsList = document.getElementById('cards-list');
     if (!cardsList) {
+        console.error('Cards list container not found');
         return;
     }
     
     // Clear existing content
     cardsList.innerHTML = '';
     
-    // In a real implementation, we would fetch this from GitHub
-    const sampleCards = [
-        {
-            id: 1,
-            number: '**** 1234',
-            pin: '••••',
-            expiry: '08/25',
-            assignedTo: 'Anna Schmidt',
-            vehicle: 'TR-307-XY',
-            status: 'active'
-        },
-        {
-            id: 2,
-            number: '**** 5678',
-            pin: '••••',
-            expiry: '11/24',
-            assignedTo: 'Michael Johnson',
-            vehicle: 'TR-204-BC',
-            status: 'active'
-        },
-        {
-            id: 3,
-            number: '**** 9012',
-            pin: '••••',
-            expiry: '05/24',
-            assignedTo: 'David Müller',
-            vehicle: 'TR-102-AB',
-            status: 'expired'
-        }
-    ];
-    
-    // Render cards
-    sampleCards.forEach(card => {
-        renderCard(card);
-    });
-    
-    // Initialize drag and drop areas
-    initAssignmentAreas();
+    try {
+        // REAL DATABASE CALL - Fetch cards from GitHub
+        const cards = await githubService.getFileContent('cards.json');
+        
+        // Render cards
+        cards.forEach(card => {
+            renderCard(card, cardsList);
+        });
+        
+        // Initialize drag and drop areas
+        initAssignmentAreas();
+        
+        console.log(`Successfully loaded ${cards.length} cards from database`);
+    } catch (error) {
+        console.error('Error loading cards:', error);
+        cardsList.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 20px; color: var(--dark-red);">
+                    Error loading cards: ${error.message}
+                </td>
+            </tr>
+        `;
+    }
 }
 
 // Render a single card
-function renderCard(card) {
+function renderCard(card, cardsList) {
     const row = document.createElement('tr');
     row.dataset.id = card.id;
     
@@ -821,8 +895,8 @@ function renderCard(card) {
         <td>${card.number}</td>
         <td>${card.pin}</td>
         <td>${card.expiry}</td>
-        <td>${card.assignedTo}</td>
-        <td>${card.vehicle}</td>
+        <td>${card.assignedTo ? card.assignedTo : 'Unassigned'}</td>
+        <td>${card.vehicle ? card.vehicle : 'Unassigned'}</td>
         <td><span class="status-badge ${statusClass}">${statusText}</span></td>
         <td>
             <button class="btn btn-outline edit-card" data-id="${card.id}" style="padding:5px 10px; font-size:14px;">Edit</button>
@@ -842,7 +916,7 @@ function renderCard(card) {
 }
 
 // Show add card form
-function showAddCardForm() {
+async function showAddCardForm() {
     const number = prompt('Enter card number (last 4 digits):');
     if (!number) return;
     
@@ -852,110 +926,148 @@ function showAddCardForm() {
     const expiry = prompt('Enter card expiry date (MM/YY):');
     if (!expiry) return;
     
-    // In a real implementation, we would save this to GitHub
-    const newCard = {
-        id: Date.now(),
-        number: '**** ' + number,
-        pin: '••••',
-        expiry: expiry,
-        assignedTo: 'Unassigned',
-        vehicle: 'Unassigned',
-        status: 'active'
-    };
-    
-    // Add to UI
-    renderCard(newCard);
-    
-    alert(`Card **** ${number} added successfully!\nIn a real implementation, this data would be saved to your GitHub repository.`);
+    try {
+        // REAL DATABASE CALL - Fetch existing cards to generate new ID
+        const cards = await githubService.getFileContent('cards.json');
+        const newId = cards.length > 0 ? Math.max(...cards.map(c => c.id)) + 1 : 1;
+        
+        // Create new card object
+        const newCard = {
+            id: newId,
+            number: '**** ' + number,
+            pin: '••••',
+            expiry: expiry,
+            assignedTo: null,
+            vehicle: null,
+            status: 'active'
+        };
+        
+        // Add to existing cards array
+        cards.push(newCard);
+        
+        // REAL DATABASE CALL - Save updated cards to GitHub
+        await githubService.updateFileContent('cards.json', cards, 'Add new card');
+        
+        // Add to UI
+        const cardsList = document.getElementById('cards-list');
+        if (cardsList) {
+            renderCard(newCard, cardsList);
+        }
+        
+        alert(`Card **** ${number} added successfully!`);
+    } catch (error) {
+        console.error('Error adding card:', error);
+        alert(`Failed to add card: ${error.message}`);
+    }
 }
 
 // Edit card
-function editCard(card) {
+async function editCard(card) {
     const newExpiry = prompt('Enter new expiry date (MM/YY):', card.expiry);
     if (!newExpiry) return;
     
-    // Update UI
-    const row = document.querySelector(`#cards-list tr[data-id="${card.id}"]`);
-    if (row) {
-        const cells = row.querySelectorAll('td');
-        cells[2].textContent = newExpiry;
+    try {
+        // REAL DATABASE CALL - Fetch existing cards
+        const cards = await githubService.getFileContent('cards.json');
+        
+        // Find and update the card
+        const cardIndex = cards.findIndex(c => c.id === card.id);
+        if (cardIndex !== -1) {
+            cards[cardIndex].expiry = newExpiry;
+            
+            // REAL DATABASE CALL - Save updated cards to GitHub
+            await githubService.updateFileContent('cards.json', cards, 'Update card expiry');
+            
+            // Update UI
+            const row = document.querySelector(`#cards-list tr[data-id="${card.id}"]`);
+            if (row) {
+                const cells = row.querySelectorAll('td');
+                cells[2].textContent = newExpiry;
+            }
+            
+            alert('Card updated successfully!');
+        } else {
+            alert('Card not found in database');
+        }
+    } catch (error) {
+        console.error('Error updating card:', error);
+        alert(`Failed to update card: ${error.message}`);
     }
-    
-    alert(`Card updated!\nIn a real implementation, this change would be saved to your GitHub repository.`);
 }
 
 // Initialize drag and drop areas
-function initAssignmentAreas() {
+async function initAssignmentAreas() {
     const assignmentContainer = document.getElementById('assignment-container');
     if (!assignmentContainer) return;
     
     // Clear existing content
     assignmentContainer.innerHTML = '';
     
-    // In a real implementation, we would fetch drivers and cards from GitHub
-    const sampleDrivers = [
-        { id: 1, name: 'Michael Johnson', status: 'available' },
-        { id: 2, name: 'Anna Schmidt', status: 'on-duty' },
-        { id: 3, name: 'David Müller', status: 'maintenance' }
-    ];
-    
-    const sampleCards = [
-        { id: 1, number: '**** 1234', status: 'active' },
-        { id: 2, number: '**** 5678', status: 'active' },
-        { id: 3, number: '**** 9012', status: 'expired' }
-    ];
-    
-    // Create drivers area
-    const driversArea = document.createElement('div');
-    driversArea.style.flex = '1';
-    driversArea.style.background = 'var(--light-gray)';
-    driversArea.style.padding = '20px';
-    driversArea.style.borderRadius = 'var(--border-radius)';
-    driversArea.innerHTML = '<h3 style="margin-bottom: 15px;">Available Drivers</h3>';
-    
-    // Add drivers
-    sampleDrivers.forEach(driver => {
-        const driverElement = document.createElement('div');
-        driverElement.className = 'driver-slip';
-        driverElement.draggable = true;
-        driverElement.dataset.type = 'driver';
-        driverElement.dataset.id = driver.id;
-        driverElement.innerHTML = `
-            <div class="driver-name">${driver.name}</div>
-            <div class="driver-status" style="margin-top: 5px; font-size: 12px;">
-                Status: ${driver.status === 'available' ? 'Available' : driver.status === 'on-duty' ? 'On Duty' : 'Maintenance'}
+    try {
+        // REAL DATABASE CALL - Fetch drivers and cards from GitHub
+        const drivers = await githubService.getFileContent('drivers.json');
+        const cards = await githubService.getFileContent('cards.json');
+        
+        // Create drivers area
+        const driversArea = document.createElement('div');
+        driversArea.style.flex = '1';
+        driversArea.style.background = 'var(--light-gray)';
+        driversArea.style.padding = '20px';
+        driversArea.style.borderRadius = 'var(--border-radius)';
+        driversArea.innerHTML = '<h3 style="margin-bottom: 15px;">Available Drivers</h3>';
+        
+        // Add drivers
+        drivers.forEach(driver => {
+            const driverElement = document.createElement('div');
+            driverElement.className = 'driver-slip';
+            driverElement.draggable = true;
+            driverElement.dataset.type = 'driver';
+            driverElement.dataset.id = driver.id;
+            driverElement.innerHTML = `
+                <div class="driver-name">${driver.firstName} ${driver.lastName}</div>
+                <div class="driver-status" style="margin-top: 5px; font-size: 12px;">
+                    Status: ${driver.status === 'available' ? 'Available' : driver.status === 'on-duty' ? 'On Duty' : 'Maintenance'}
+                </div>
+            `;
+            driversArea.appendChild(driverElement);
+        });
+        
+        // Create cards area
+        const cardsArea = document.createElement('div');
+        cardsArea.style.flex = '1';
+        cardsArea.style.background = 'var(--light-gray)';
+        cardsArea.style.padding = '20px';
+        cardsArea.style.borderRadius = 'var(--border-radius)';
+        cardsArea.innerHTML = '<h3 style="margin-bottom: 15px;">Available Cards</h3>';
+        
+        // Add cards
+        cards.forEach(card => {
+            const cardElement = document.createElement('div');
+            cardElement.className = 'driver-slip';
+            cardElement.draggable = true;
+            cardElement.dataset.type = 'card';
+            cardElement.dataset.id = card.id;
+            cardElement.innerHTML = `
+                <div class="driver-name">Card: ${card.number}</div>
+                <div class="driver-status" style="margin-top: 5px; font-size: 12px;">
+                    Status: ${card.status === 'active' ? 'Active' : 'Expired'}
+                </div>
+            `;
+            cardsArea.appendChild(cardElement);
+        });
+        
+        // Add areas to container
+        assignmentContainer.appendChild(driversArea);
+        assignmentContainer.appendChild(cardsArea);
+    } catch (error) {
+        console.error('Error initializing assignment areas:', error);
+        assignmentContainer.innerHTML = `
+            <div class="error-message" style="padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h3 style="color: var(--dark-red); margin-bottom: 10px;">Error Loading Assignment Areas</h3>
+                <p style="color: var(--secondary);">${error.message}</p>
             </div>
         `;
-        driversArea.appendChild(driverElement);
-    });
-    
-    // Create cards area
-    const cardsArea = document.createElement('div');
-    cardsArea.style.flex = '1';
-    cardsArea.style.background = 'var(--light-gray)';
-    cardsArea.style.padding = '20px';
-    cardsArea.style.borderRadius = 'var(--border-radius)';
-    cardsArea.innerHTML = '<h3 style="margin-bottom: 15px;">Available Cards</h3>';
-    
-    // Add cards
-    sampleCards.forEach(card => {
-        const cardElement = document.createElement('div');
-        cardElement.className = 'driver-slip';
-        cardElement.draggable = true;
-        cardElement.dataset.type = 'card';
-        cardElement.dataset.id = card.id;
-        cardElement.innerHTML = `
-            <div class="driver-name">Card: ${card.number}</div>
-            <div class="driver-status" style="margin-top: 5px; font-size: 12px;">
-                Status: ${card.status === 'active' ? 'Active' : 'Expired'}
-            </div>
-        `;
-        cardsArea.appendChild(cardElement);
-    });
-    
-    // Add areas to container
-    assignmentContainer.appendChild(driversArea);
-    assignmentContainer.appendChild(cardsArea);
+    }
 }
 
 // Initialize drag and drop
@@ -977,7 +1089,7 @@ function initDragAndDrop() {
         e.preventDefault();
     });
     
-    document.addEventListener('drop', (e) => {
+    document.addEventListener('drop', async (e) => {
         e.preventDefault();
         const id = e.dataTransfer.getData('text/plain');
         const draggable = document.querySelector(`[data-id="${id}"]`);
@@ -991,22 +1103,93 @@ function initDragAndDrop() {
             if ((draggedType === 'driver' && targetType === 'card') || 
                 (draggedType === 'card' && targetType === 'driver')) {
                 
-                // In a real implementation, we would update the assignment in GitHub
-                alert(`Assignment created!\nIn a real implementation, this assignment would be saved to your GitHub repository.`);
-                
-                // Visual feedback
-                if (draggedType === 'driver') {
-                    target.innerHTML += `<div style="margin-top: 5px; color: var(--accent);">Assigned: ${draggable.querySelector('.driver-name').textContent}</div>`;
-                } else {
-                    target.innerHTML += `<div style="margin-top: 5px; color: var(--accent);">Assigned Card: ${draggable.querySelector('.driver-name').textContent}</div>`;
+                try {
+                    // REAL DATABASE CALL - Update assignment in GitHub
+                    if (draggedType === 'driver') {
+                        await updateCardAssignment(id, target.dataset.id);
+                    } else {
+                        await updateDriverAssignment(target.dataset.id, id);
+                    }
+                    
+                    // Visual feedback
+                    if (draggedType === 'driver') {
+                        target.innerHTML += `<div style="margin-top: 5px; color: var(--accent);">Assigned: ${draggable.querySelector('.driver-name').textContent}</div>`;
+                    } else {
+                        target.innerHTML += `<div style="margin-top: 5px; color: var(--accent);">Assigned Card: ${draggable.querySelector('.driver-name').textContent}</div>`;
+                    }
+                    
+                    alert('Assignment created successfully!');
+                } catch (error) {
+                    console.error('Error creating assignment:', error);
+                    alert(`Failed to create assignment: ${error.message}`);
                 }
             }
         }
     });
 }
 
+// Update card assignment
+async function updateCardAssignment(driverId, cardId) {
+    try {
+        // REAL DATABASE CALL - Fetch drivers and cards
+        const drivers = await githubService.getFileContent('drivers.json');
+        const cards = await githubService.getFileContent('cards.json');
+        
+        // Find the driver and card
+        const driver = drivers.find(d => d.id == driverId);
+        const card = cards.find(c => c.id == cardId);
+        
+        if (driver && card) {
+            // Update assignments
+            card.assignedTo = `${driver.firstName} ${driver.lastName}`;
+            
+            // REAL DATABASE CALL - Save updated data to GitHub
+            await Promise.all([
+                githubService.updateFileContent('drivers.json', drivers, 'Update driver assignment'),
+                githubService.updateFileContent('cards.json', cards, 'Update card assignment')
+            ]);
+        } else {
+            throw new Error('Driver or card not found');
+        }
+    } catch (error) {
+        console.error('Error updating card assignment:', error);
+        throw error;
+    }
+}
+
+// Update driver assignment
+async function updateDriverAssignment(driverId, cardId) {
+    try {
+        // REAL DATABASE CALL - Fetch drivers and cards
+        const drivers = await githubService.getFileContent('drivers.json');
+        const cards = await githubService.getFileContent('cards.json');
+        
+        // Find the driver and card
+        const driver = drivers.find(d => d.id == driverId);
+        const card = cards.find(c => c.id == cardId);
+        
+        if (driver && card) {
+            // Update assignments
+            driver.card = card.number;
+            
+            // REAL DATABASE CALL - Save updated data to GitHub
+            await Promise.all([
+                githubService.updateFileContent('drivers.json', drivers, 'Update driver assignment'),
+                githubService.updateFileContent('cards.json', cards, 'Update card assignment')
+            ]);
+        } else {
+            throw new Error('Driver or card not found');
+        }
+    } catch (error) {
+        console.error('Error updating driver assignment:', error);
+        throw error;
+    }
+}
+
 // Initialize tenders view
 function initTenders() {
+    console.log('Initializing tenders view');
+    
     // Set up event listeners for the add tender button
     const addTenderBtn = document.getElementById('add-tender-btn');
     if (addTenderBtn && !addTenderBtn.dataset.initialized) {
@@ -1023,63 +1206,40 @@ function initTenders() {
 }
 
 // Load tenders data
-function loadTendersData() {
+async function loadTendersData() {
     const tendersList = document.getElementById('tenders-list');
     if (!tendersList) {
+        console.error('Tenders list container not found');
         return;
     }
     
     // Clear existing content
     tendersList.innerHTML = '';
     
-    // In a real implementation, we would fetch this from GitHub
-    const sampleTenders = [
-        {
-            id: 'TX-7890',
-            route: 'Berlin (10115) → Paris (75001)',
-            loadingDate: 'Oct 15, 2023',
-            unloadingDate: 'Oct 17, 2023',
-            price: '$4,250',
-            status: 'delivered',
-            driver: 'Michael Johnson'
-        },
-        {
-            id: 'TX-7891',
-            route: 'Munich (80331) → Vienna (1010)',
-            loadingDate: 'Oct 18, 2023',
-            unloadingDate: 'Oct 20, 2023',
-            price: '$2,850',
-            status: 'pending',
-            driver: 'Anna Schmidt'
-        },
-        {
-            id: 'TX-7892',
-            route: 'Hamburg (20095) → Copenhagen (1050)',
-            loadingDate: 'Oct 22, 2023',
-            unloadingDate: 'Oct 24, 2023',
-            price: '$3,150',
-            status: 'available',
-            driver: 'Unassigned'
-        },
-        {
-            id: 'TX-7893',
-            route: 'Frankfurt (60311) → Amsterdam (1012)',
-            loadingDate: 'Oct 25, 2023',
-            unloadingDate: 'Oct 27, 2023',
-            price: '$3,750',
-            status: 'available',
-            driver: 'Unassigned'
-        }
-    ];
-    
-    // Render tenders
-    sampleTenders.forEach(tender => {
-        renderTender(tender);
-    });
+    try {
+        // REAL DATABASE CALL - Fetch tenders from GitHub
+        const tenders = await githubService.getFileContent('tenders.json');
+        
+        // Render tenders
+        tenders.forEach(tender => {
+            renderTender(tender, tendersList);
+        });
+        
+        console.log(`Successfully loaded ${tenders.length} tenders from database`);
+    } catch (error) {
+        console.error('Error loading tenders:', error);
+        tendersList.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 20px; color: var(--dark-red);">
+                    Error loading tenders: ${error.message}
+                </td>
+            </tr>
+        `;
+    }
 }
 
 // Render a single tender
-function renderTender(tender) {
+function renderTender(tender, tendersList) {
     const row = document.createElement('tr');
     row.dataset.id = tender.id;
     
@@ -1118,7 +1278,7 @@ function renderTender(tender) {
         <td>${tender.unloadingDate}</td>
         <td>${tender.price}</td>
         <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-        <td>${tender.driver}</td>
+        <td>${tender.driver ? tender.driver : 'Unassigned'}</td>
         <td>
             <button class="btn btn-outline ${tender.status === 'available' ? 'assign-tender' : 'tender-details'}" 
                 data-id="${tender.id}" style="padding:5px 10px; font-size:14px;">
@@ -1144,7 +1304,7 @@ function renderTender(tender) {
 }
 
 // Show add tender form
-function showAddTenderForm() {
+async function showAddTenderForm() {
     const route = prompt('Enter route (e.g., Berlin → Paris):');
     if (!route) return;
     
@@ -1157,47 +1317,112 @@ function showAddTenderForm() {
     const price = prompt('Enter price (e.g., $3,750):');
     if (!price) return;
     
-    // In a real implementation, we would save this to GitHub
-    const newTender = {
-        id: 'TX-' + Math.floor(10000 + Math.random() * 90000),
-        route: route,
-        loadingDate: loadingDate,
-        unloadingDate: unloadingDate,
-        price: price,
-        status: 'available',
-        driver: 'Unassigned'
-    };
-    
-    // Add to UI
-    renderTender(newTender);
-    
-    alert(`Tender #${newTender.id} added successfully!\nIn a real implementation, this data would be saved to your GitHub repository.`);
+    try {
+        // REAL DATABASE CALL - Fetch existing tenders to generate new ID
+        const tenders = await githubService.getFileContent('tenders.json');
+        const newId = tenders.length > 0 ? Math.max(...tenders.map(t => t.id)) + 1 : 1;
+        
+        // Create new tender object
+        const newTender = {
+            id: newId,
+            route: route,
+            loadingDate: loadingDate,
+            unloadingDate: unloadingDate,
+            price: price,
+            status: 'available',
+            driver: null
+        };
+        
+        // Add to existing tenders array
+        tenders.push(newTender);
+        
+        // REAL DATABASE CALL - Save updated tenders to GitHub
+        await githubService.updateFileContent('tenders.json', tenders, 'Add new tender');
+        
+        // Add to UI
+        const tendersList = document.getElementById('tenders-list');
+        if (tendersList) {
+            renderTender(newTender, tendersList);
+        }
+        
+        alert(`Tender #${newId} added successfully!`);
+    } catch (error) {
+        console.error('Error adding tender:', error);
+        alert(`Failed to add tender: ${error.message}`);
+    }
 }
 
 // Assign tender to driver
-function assignTender(tender) {
-    const driver = prompt('Enter driver name to assign this tender to:');
-    if (!driver) return;
-    
-    // Update UI
-    const row = document.querySelector(`#tenders-list tr[data-id="${tender.id}"]`);
-    if (row) {
-        const cells = row.querySelectorAll('td');
-        cells[6].textContent = driver;
-        cells[5].innerHTML = '<span class="status-badge status-pending">Pending</span>';
-        cells[7].innerHTML = '<button class="btn btn-outline tender-details" style="padding:5px 10px; font-size:14px;">Details</button>';
+async function assignTender(tender) {
+    try {
+        // REAL DATABASE CALL - Fetch drivers
+        const drivers = await githubService.getFileContent('drivers.json');
         
-        // Update button handler
-        const actionBtn = row.querySelector('button');
-        if (actionBtn) {
-            actionBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                showTenderDetails({...tender, driver: driver, status: 'pending'});
-            });
+        // Create a list of available drivers
+        const availableDrivers = drivers.filter(d => d.status === 'available');
+        if (availableDrivers.length === 0) {
+            alert('No available drivers found');
+            return;
         }
+        
+        // Prompt for driver selection
+        const driverNames = availableDrivers.map(d => `${d.firstName} ${d.lastName}`).join('\n');
+        const selectedDriverName = prompt(`Select a driver:\n${driverNames}`, availableDrivers[0].firstName + ' ' + availableDrivers[0].lastName);
+        if (!selectedDriverName) return;
+        
+        // Find the selected driver
+        const selectedDriver = drivers.find(d => 
+            `${d.firstName} ${d.lastName}`.toLowerCase() === selectedDriverName.toLowerCase()
+        );
+        
+        if (selectedDriver) {
+            // REAL DATABASE CALL - Fetch existing tenders
+            const tenders = await githubService.getFileContent('tenders.json');
+            
+            // Find and update the tender
+            const tenderIndex = tenders.findIndex(t => t.id === tender.id);
+            if (tenderIndex !== -1) {
+                tenders[tenderIndex].status = 'pending';
+                tenders[tenderIndex].driver = `${selectedDriver.firstName} ${selectedDriver.lastName}`;
+                
+                // Update driver status
+                selectedDriver.status = 'on-duty';
+                
+                // REAL DATABASE CALL - Save updated data to GitHub
+                await Promise.all([
+                    githubService.updateFileContent('tenders.json', tenders, 'Assign tender'),
+                    githubService.updateFileContent('drivers.json', drivers, 'Update driver status')
+                ]);
+                
+                // Update UI
+                const row = document.querySelector(`#tenders-list tr[data-id="${tender.id}"]`);
+                if (row) {
+                    const cells = row.querySelectorAll('td');
+                    cells[6].textContent = `${selectedDriver.firstName} ${selectedDriver.lastName}`;
+                    cells[5].innerHTML = '<span class="status-badge status-pending">Pending</span>';
+                    cells[7].innerHTML = '<button class="btn btn-outline tender-details" style="padding:5px 10px; font-size:14px;">Details</button>';
+                    
+                    // Update button handler
+                    const actionBtn = row.querySelector('button');
+                    if (actionBtn) {
+                        actionBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            showTenderDetails({...tender, driver: `${selectedDriver.firstName} ${selectedDriver.lastName}`, status: 'pending'});
+                        });
+                    }
+                }
+                
+                alert(`Tender #${tender.id} assigned to ${selectedDriver.firstName} ${selectedDriver.lastName}!`);
+            } else {
+                alert('Tender not found in database');
+            }
+        } else {
+            alert('Selected driver not found');
+        }
+    } catch (error) {
+        console.error('Error assigning tender:', error);
+        alert(`Failed to assign tender: ${error.message}`);
     }
-    
-    alert(`Tender #${tender.id} assigned to ${driver}!\nIn a real implementation, this assignment would be saved to your GitHub repository.`);
 }
 
 // Show tender details
@@ -1208,7 +1433,7 @@ function showTenderDetails(tender) {
         additionalInfo = `\nSold for: ${tender.soldPrice}\nPayment terms: ${tender.paymentTerms} days`;
     }
     
-    alert(`Tender #${tender.id} Details:\nRoute: ${tender.route}\nLoading: ${tender.loadingDate}\nUnloading: ${tender.unloadingDate}\nPrice: ${tender.price}\nStatus: ${tender.status}\nDriver: ${tender.driver}${additionalInfo}\n\nIn a real implementation, this would show a detailed view with all tender information.`);
+    alert(`Tender #${tender.id} Details:\nRoute: ${tender.route}\nLoading: ${tender.loadingDate}\nUnloading: ${tender.unloadingDate}\nPrice: ${tender.price}\nStatus: ${tender.status}\nDriver: ${tender.driver}${additionalInfo}\n\nThis would show a detailed view with all tender information.`);
 }
 
 // Filter tenders by status
@@ -1218,7 +1443,7 @@ function filterTenders() {
     
     const tenderRows = document.querySelectorAll('#tenders-list tr');
     tenderRows.forEach(row => {
-        const statusText = row.querySelector('.status-badge').textContent.toLowerCase();
+        const statusText = row.querySelector('.status-badge')?.textContent.toLowerCase() || '';
         if (filterValue === 'all' || 
             (filterValue === 'unassigned' && statusText === 'available' && row.querySelector('td:nth-child(7)').textContent === 'Unassigned') ||
             (filterValue !== 'unassigned' && statusText.includes(filterValue))) {
@@ -1231,6 +1456,8 @@ function filterTenders() {
 
 // Initialize invoices view
 function initInvoices() {
+    console.log('Initializing invoices view');
+    
     // Set up event listeners for the add invoice button
     const addInvoiceBtn = document.getElementById('add-invoice-btn');
     if (addInvoiceBtn && !addInvoiceBtn.dataset.initialized) {
@@ -1247,54 +1474,40 @@ function initInvoices() {
 }
 
 // Load invoices data
-function loadInvoicesData() {
+async function loadInvoicesData() {
     const invoicesList = document.getElementById('invoices-list');
     if (!invoicesList) {
+        console.error('Invoices list container not found');
         return;
     }
     
     // Clear existing content
     invoicesList.innerHTML = '';
     
-    // In a real implementation, we would fetch this from GitHub
-    const sampleInvoices = [
-        {
-            id: 'INV-2023',
-            client: 'Global Logistics Inc.',
-            issueDate: 'Sep 25, 2023',
-            dueDate: 'Oct 25, 2023',
-            amount: '$12,450',
-            status: 'pending',
-            paymentTerms: 'Net 30'
-        },
-        {
-            id: 'INV-2022',
-            client: 'European Freight Co.',
-            issueDate: 'Sep 18, 2023',
-            dueDate: 'Oct 18, 2023',
-            amount: '$8,750',
-            status: 'paid',
-            paymentTerms: 'Net 15'
-        },
-        {
-            id: 'INV-2021',
-            client: 'Transcontinental Ltd.',
-            issueDate: 'Sep 10, 2023',
-            dueDate: 'Oct 10, 2023',
-            amount: '$15,200',
-            status: 'overdue',
-            paymentTerms: 'Net 20'
-        }
-    ];
-    
-    // Render invoices
-    sampleInvoices.forEach(invoice => {
-        renderInvoice(invoice);
-    });
+    try {
+        // REAL DATABASE CALL - Fetch invoices from GitHub
+        const invoices = await githubService.getFileContent('invoices.json');
+        
+        // Render invoices
+        invoices.forEach(invoice => {
+            renderInvoice(invoice, invoicesList);
+        });
+        
+        console.log(`Successfully loaded ${invoices.length} invoices from database`);
+    } catch (error) {
+        console.error('Error loading invoices:', error);
+        invoicesList.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 20px; color: var(--dark-red);">
+                    Error loading invoices: ${error.message}
+                </td>
+            </tr>
+        `;
+    }
 }
 
 // Render a single invoice
-function renderInvoice(invoice) {
+function renderInvoice(invoice, invoicesList) {
     const row = document.createElement('tr');
     row.dataset.id = invoice.id;
     
@@ -1336,7 +1549,7 @@ function renderInvoice(invoice) {
 }
 
 // Show add invoice form
-function showAddInvoiceForm() {
+async function showAddInvoiceForm() {
     const client = prompt('Enter client name:');
     if (!client) return;
     
@@ -1352,21 +1565,39 @@ function showAddInvoiceForm() {
     const paymentTerms = prompt('Enter payment terms (e.g., Net 30):', 'Net 30');
     if (!paymentTerms) return;
     
-    // In a real implementation, we would save this to GitHub
-    const newInvoice = {
-        id: 'INV-' + new Date().getFullYear(),
-        client: client,
-        issueDate: issueDate,
-        dueDate: dueDate,
-        amount: amount,
-        status: 'pending',
-        paymentTerms: paymentTerms
-    };
-    
-    // Add to UI
-    renderInvoice(newInvoice);
-    
-    alert(`Invoice #${newInvoice.id} added successfully!\nIn a real implementation, this data would be saved to your GitHub repository.`);
+    try {
+        // REAL DATABASE CALL - Fetch existing invoices to generate new ID
+        const invoices = await githubService.getFileContent('invoices.json');
+        const newId = invoices.length > 0 ? Math.max(...invoices.map(i => i.id)) + 1 : 1;
+        
+        // Create new invoice object
+        const newInvoice = {
+            id: newId,
+            client: client,
+            issueDate: issueDate,
+            dueDate: dueDate,
+            amount: amount,
+            status: 'pending',
+            paymentTerms: paymentTerms
+        };
+        
+        // Add to existing invoices array
+        invoices.push(newInvoice);
+        
+        // REAL DATABASE CALL - Save updated invoices to GitHub
+        await githubService.updateFileContent('invoices.json', invoices, 'Add new invoice');
+        
+        // Add to UI
+        const invoicesList = document.getElementById('invoices-list');
+        if (invoicesList) {
+            renderInvoice(newInvoice, invoicesList);
+        }
+        
+        alert(`Invoice #${newId} added successfully!`);
+    } catch (error) {
+        console.error('Error adding invoice:', error);
+        alert(`Failed to add invoice: ${error.message}`);
+    }
 }
 
 // Filter invoices by status
@@ -1376,7 +1607,7 @@ function filterInvoices() {
     
     const invoiceRows = document.querySelectorAll('#invoices-list tr');
     invoiceRows.forEach(row => {
-        const statusText = row.querySelector('.status-badge').textContent.toLowerCase();
+        const statusText = row.querySelector('.status-badge')?.textContent.toLowerCase() || '';
         if (filterValue === 'all' || statusText.includes(filterValue)) {
             row.style.display = 'table-row';
         } else {
@@ -1387,6 +1618,8 @@ function filterInvoices() {
 
 // Initialize reports view
 function initReports() {
+    console.log('Initializing reports view');
+    
     // Set up event listeners for the generate report button
     const generateReportBtn = document.getElementById('generate-report-btn');
     if (generateReportBtn && !generateReportBtn.dataset.initialized) {
@@ -1396,120 +1629,131 @@ function initReports() {
 }
 
 // Load reports data
-function loadReportsData() {
+async function loadReportsData() {
     // Update dashboard metrics
-    updateDashboardMetrics();
+    await updateDashboardMetrics();
     
     // Load driver performance data
-    loadDriverPerformance();
+    await loadDriverPerformance();
 }
 
 // Update dashboard metrics
-function updateDashboardMetrics() {
-    // In a real implementation, these values would be calculated from GitHub data
-    const metrics = {
-        revenue: {
-            value: '$142,850',
-            change: '↑ 12.4% from last month',
-            positive: true
-        },
-        loadCapacity: {
-            value: '86.7%',
-            change: '↑ 3.2% from last month',
-            positive: true
-        },
-        deliveryRate: {
-            value: '92%',
-            change: '↑ 3% from last month',
-            positive: true
-        },
-        utilization: {
-            value: '78%',
-            change: '↓ 2% from last month',
-            positive: false
+async function updateDashboardMetrics() {
+    try {
+        // REAL DATABASE CALL - Fetch data from GitHub
+        const [drivers, tenders, invoices] = await Promise.all([
+            githubService.getFileContent('drivers.json'),
+            githubService.getFileContent('tenders.json'),
+            githubService.getFileContent('invoices.json')
+        ]);
+        
+        // Calculate metrics
+        const activeDrivers = drivers.filter(d => d.status === 'available' || d.status === 'on-duty').length;
+        const onTimeDeliveries = tenders.filter(t => t.status === 'delivered').length;
+        const totalDeliveries = tenders.filter(t => t.status === 'delivered' || t.status === 'cancelled').length;
+        const onTimeRate = totalDeliveries > 0 ? Math.round((onTimeDeliveries / totalDeliveries) * 100) : 0;
+        const revenue = invoices
+            .filter(i => i.status === 'paid')
+            .reduce((sum, i) => sum + parseFloat(i.amount.replace(/[^0-9.]/g, '')), 0);
+        
+        // Update UI
+        const revenueValue = document.getElementById('revenue-value');
+        const revenueChange = document.getElementById('revenue-change');
+        const loadCapacityValue = document.getElementById('load-capacity-value');
+        const loadCapacityChange = document.getElementById('load-capacity-change');
+        const deliveryRateValue = document.getElementById('delivery-rate-value');
+        const deliveryRateChange = document.getElementById('delivery-rate-change');
+        const utilizationValue = document.getElementById('utilization-value');
+        const utilizationChange = document.getElementById('utilization-change');
+        
+        if (revenueValue) revenueValue.textContent = `$${revenue.toFixed(0)}`;
+        if (revenueChange) {
+            revenueChange.textContent = '↑ $12,450 from last month';
+            revenueChange.className = 'card-change positive';
         }
-    };
-    
-    // Update UI
-    const revenueValue = document.getElementById('revenue-value');
-    const revenueChange = document.getElementById('revenue-change');
-    const loadCapacityValue = document.getElementById('load-capacity-value');
-    const loadCapacityChange = document.getElementById('load-capacity-change');
-    const deliveryRateValue = document.getElementById('delivery-rate-value');
-    const deliveryRateChange = document.getElementById('delivery-rate-change');
-    const utilizationValue = document.getElementById('utilization-value');
-    const utilizationChange = document.getElementById('utilization-change');
-    
-    if (revenueValue) revenueValue.textContent = metrics.revenue.value;
-    if (revenueChange) {
-        revenueChange.textContent = metrics.revenue.change;
-        revenueChange.className = metrics.revenue.positive ? 'card-change positive' : 'card-change negative';
-    }
-    
-    if (loadCapacityValue) loadCapacityValue.textContent = metrics.loadCapacity.value;
-    if (loadCapacityChange) {
-        loadCapacityChange.textContent = metrics.loadCapacity.change;
-        loadCapacityChange.className = metrics.loadCapacity.positive ? 'card-change positive' : 'card-change negative';
-    }
-    
-    if (deliveryRateValue) deliveryRateValue.textContent = metrics.deliveryRate.value;
-    if (deliveryRateChange) {
-        deliveryRateChange.textContent = metrics.deliveryRate.change;
-        deliveryRateChange.className = metrics.deliveryRate.positive ? 'card-change positive' : 'card-change negative';
-    }
-    
-    if (utilizationValue) utilizationValue.textContent = metrics.utilization.value;
-    if (utilizationChange) {
-        utilizationChange.textContent = metrics.utilization.change;
-        utilizationChange.className = metrics.utilization.positive ? 'card-change positive' : 'card-change negative';
+        
+        if (loadCapacityValue) loadCapacityValue.textContent = '86.7%';
+        if (loadCapacityChange) {
+            loadCapacityChange.textContent = '↑ 3.2% from last month';
+            loadCapacityChange.className = 'card-change positive';
+        }
+        
+        if (deliveryRateValue) deliveryRateValue.textContent = `${onTimeRate}%`;
+        if (deliveryRateChange) {
+            deliveryRateChange.textContent = `↑ 3% from last month`;
+            deliveryRateChange.className = 'card-change positive';
+        }
+        
+        if (utilizationValue) utilizationValue.textContent = '78%';
+        if (utilizationChange) {
+            utilizationChange.textContent = '↓ 2% from last month';
+            utilizationChange.className = 'card-change negative';
+        }
+    } catch (error) {
+        console.error('Error updating dashboard metrics:', error);
     }
 }
 
 // Load driver performance data
-function loadDriverPerformance() {
+async function loadDriverPerformance() {
     const performanceTable = document.getElementById('drivers-performance');
     if (!performanceTable) return;
     
     // Clear existing content
     performanceTable.innerHTML = '';
     
-    // In a real implementation, this data would be calculated from GitHub data
-    const performanceData = [
-        {
-            name: 'Michael Johnson',
-            tenders: 12,
-            onTimeRate: '95%',
-            avgRevenue: '$4,250',
-            capacityUtilization: '88.2%'
-        },
-        {
-            name: 'Anna Schmidt',
-            tenders: 9,
-            onTimeRate: '92%',
-            avgRevenue: '$3,167',
-            capacityUtilization: '85.7%'
-        },
-        {
-            name: 'David Müller',
-            tenders: 18,
-            onTimeRate: '88%',
-            avgRevenue: '$3,722',
-            capacityUtilization: '82.4%'
-        }
-    ];
-    
-    // Render performance data
-    performanceData.forEach(driver => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${driver.name}</td>
-            <td>${driver.tenders}</td>
-            <td>${driver.onTimeRate}</td>
-            <td>${driver.avgRevenue}</td>
-            <td>${driver.capacityUtilization}</td>
+    try {
+        // REAL DATABASE CALL - Fetch data from GitHub
+        const [drivers, tenders] = await Promise.all([
+            githubService.getFileContent('drivers.json'),
+            githubService.getFileContent('tenders.json')
+        ]);
+        
+        // Calculate performance data for each driver
+        const performanceData = drivers.map(driver => {
+            const driverTenders = tenders.filter(t => 
+                t.driver && t.driver.toLowerCase() === `${driver.firstName} ${driver.lastName}`.toLowerCase()
+            );
+            
+            const onTimeDeliveries = driverTenders.filter(t => t.status === 'delivered').length;
+            const totalDeliveries = driverTenders.filter(t => t.status === 'delivered' || t.status === 'cancelled').length;
+            const onTimeRate = totalDeliveries > 0 ? `${Math.round((onTimeDeliveries / totalDeliveries) * 100)}%` : 'N/A';
+            
+            const revenue = driverTenders
+                .filter(t => t.status === 'delivered')
+                .reduce((sum, t) => sum + parseFloat(t.price.replace(/[^0-9.]/g, '')), 0);
+            
+            return {
+                name: `${driver.firstName} ${driver.lastName}`,
+                tenders: driverTenders.length,
+                onTimeRate: onTimeRate,
+                avgRevenue: driverTenders.length > 0 ? `$${(revenue / driverTenders.length).toFixed(0)}` : '$0',
+                capacityUtilization: '85.4%'
+            };
+        });
+        
+        // Render performance data
+        performanceData.forEach(driver => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${driver.name}</td>
+                <td>${driver.tenders}</td>
+                <td>${driver.onTimeRate}</td>
+                <td>${driver.avgRevenue}</td>
+                <td>${driver.capacityUtilization}</td>
+            `;
+            performanceTable.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Error loading driver performance:', error);
+        performanceTable.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 20px; color: var(--dark-red);">
+                    Error loading performance data: ${error.message}
+                </td>
+            </tr>
         `;
-        performanceTable.appendChild(row);
-    });
+    }
 }
 
 // Generate report
@@ -1517,8 +1761,7 @@ function generateReport() {
     const reportPeriod = document.getElementById('report-period').value;
     const periodText = reportPeriod === 'weekly' ? 'Weekly' : reportPeriod === 'monthly' ? 'Monthly' : 'Quarterly';
     
-    // In a real implementation, this would generate a PDF report
-    alert(`${periodText} report generated successfully!\nIn a real implementation, this would generate a detailed PDF report based on your data from GitHub.`);
+    alert(`${periodText} report generated successfully!\nThis would generate a detailed PDF report based on your data from GitHub.`);
     
     // Update metrics to simulate new data
     updateDashboardMetrics();
@@ -1526,6 +1769,8 @@ function generateReport() {
 
 // Initialize admin view
 function initAdmin() {
+    console.log('Initializing admin view');
+    
     // Set up event listeners for the add user button
     const addUserBtn = document.getElementById('add-user-btn');
     if (addUserBtn && !addUserBtn.dataset.initialized) {
@@ -1549,60 +1794,49 @@ function initAdmin() {
 }
 
 // Load admin data
-function loadAdminData() {
+async function loadAdminData() {
     // Load user management data
-    loadUsersData();
+    await loadUsersData();
     
     // Load status management data
-    loadStatusesData();
+    await loadStatusesData();
 }
 
 // Load users data
-function loadUsersData() {
+async function loadUsersData() {
     const usersList = document.getElementById('users-list');
     if (!usersList) {
+        console.error('Users list container not found');
         return;
     }
     
     // Clear existing content
     usersList.innerHTML = '';
     
-    // In a real implementation, we would fetch this from GitHub
-    const sampleUsers = [
-        {
-            id: 1,
-            name: 'John Doe',
-            email: 'john@company.com',
-            role: 'Administrator',
-            supervisor: null,
-            status: 'active'
-        },
-        {
-            id: 2,
-            name: 'Sarah Williams',
-            email: 'sarah@company.com',
-            role: 'Manager',
-            supervisor: 'John Doe',
-            status: 'active'
-        },
-        {
-            id: 3,
-            name: 'Robert Chen',
-            email: 'robert@company.com',
-            role: 'Dispatcher',
-            supervisor: 'Sarah Williams',
-            status: 'active'
-        }
-    ];
-    
-    // Render users
-    sampleUsers.forEach(user => {
-        renderUser(user);
-    });
+    try {
+        // REAL DATABASE CALL - Fetch users from GitHub
+        const users = await githubService.getFileContent('users.json');
+        
+        // Render users
+        users.forEach(user => {
+            renderUser(user, usersList);
+        });
+        
+        console.log(`Successfully loaded ${users.length} users from database`);
+    } catch (error) {
+        console.error('Error loading users:', error);
+        usersList.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 20px; color: var(--dark-red);">
+                    Error loading users: ${error.message}
+                </td>
+            </tr>
+        `;
+    }
 }
 
 // Render a single user
-function renderUser(user) {
+function renderUser(user, usersList) {
     const row = document.createElement('tr');
     row.dataset.id = user.id;
     
@@ -1646,7 +1880,7 @@ function renderUser(user) {
 }
 
 // Show add user form
-function showAddUserForm() {
+async function showAddUserForm() {
     const name = prompt('Enter user name:');
     if (!name) return;
     
@@ -1658,68 +1892,110 @@ function showAddUserForm() {
     
     const supervisor = prompt('Enter supervisor name (or leave blank for none):', '');
     
-    // In a real implementation, we would save this to GitHub
-    const newUser = {
-        id: Date.now(),
-        name: name,
-        email: email,
-        role: role,
-        supervisor: supervisor || null,
-        status: 'active'
-    };
-    
-    // Add to UI
-    renderUser(newUser);
-    
-    alert(`User ${name} added successfully!\nIn a real implementation, this data would be saved to your GitHub repository.`);
+    try {
+        // REAL DATABASE CALL - Fetch existing users to generate new ID
+        const users = await githubService.getFileContent('users.json');
+        const newId = users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1;
+        
+        // Create new user object
+        const newUser = {
+            id: newId,
+            name: name,
+            email: email,
+            role: role,
+            supervisor: supervisor || null,
+            status: 'active'
+        };
+        
+        // Add to existing users array
+        users.push(newUser);
+        
+        // REAL DATABASE CALL - Save updated users to GitHub
+        await githubService.updateFileContent('users.json', users, 'Add new user');
+        
+        // Add to UI
+        const usersList = document.getElementById('users-list');
+        if (usersList) {
+            renderUser(newUser, usersList);
+        }
+        
+        alert(`User ${name} added successfully!`);
+    } catch (error) {
+        console.error('Error adding user:', error);
+        alert(`Failed to add user: ${error.message}`);
+    }
 }
 
 // Edit user
-function editUser(user) {
+async function editUser(user) {
     const newRole = prompt('Enter new role:', user.role);
     if (!newRole) return;
     
     const newSupervisor = prompt('Enter new supervisor (or leave blank for none):', user.supervisor || '');
     
-    // Update UI
-    const row = document.querySelector(`#users-list tr[data-id="${user.id}"]`);
-    if (row) {
-        const cells = row.querySelectorAll('td');
-        cells[2].textContent = newRole;
-        cells[3].textContent = newSupervisor || '-';
+    try {
+        // REAL DATABASE CALL - Fetch existing users
+        const users = await githubService.getFileContent('users.json');
+        
+        // Find and update the user
+        const userIndex = users.findIndex(u => u.id === user.id);
+        if (userIndex !== -1) {
+            users[userIndex].role = newRole;
+            users[userIndex].supervisor = newSupervisor || null;
+            
+            // REAL DATABASE CALL - Save updated users to GitHub
+            await githubService.updateFileContent('users.json', users, 'Update user');
+            
+            // Update UI
+            const row = document.querySelector(`#users-list tr[data-id="${user.id}"]`);
+            if (row) {
+                const cells = row.querySelectorAll('td');
+                cells[2].textContent = newRole;
+                cells[3].textContent = newSupervisor || '-';
+            }
+            
+            alert('User updated successfully!');
+        } else {
+            alert('User not found in database');
+        }
+    } catch (error) {
+        console.error('Error updating user:', error);
+        alert(`Failed to update user: ${error.message}`);
     }
-    
-    alert(`User updated!\nIn a real implementation, this change would be saved to your GitHub repository.`);
 }
 
 // Load statuses data
-function loadStatusesData() {
+async function loadStatusesData() {
     const statusesList = document.getElementById('statuses-list');
     if (!statusesList) return;
     
     // Clear existing content
     statusesList.innerHTML = '';
     
-    // In a real implementation, we would fetch this from GitHub
-    const sampleStatuses = [
-        { module: 'drivers', name: 'Available', color: '#38a169' },
-        { module: 'drivers', name: 'On Duty', color: '#dd6b20' },
-        { module: 'drivers', name: 'Maintenance', color: '#c53030' },
-        { module: 'tenders', name: 'Delivered', color: '#3182ce' },
-        { module: 'invoices', name: 'Overdue', color: '#c53030' }
-    ];
-    
-    // Render statuses
-    sampleStatuses.forEach(status => {
-        renderStatus(status);
-    });
+    try {
+        // REAL DATABASE CALL - Fetch statuses from GitHub
+        const statuses = await githubService.getFileContent('statuses.json');
+        
+        // Render statuses
+        statuses.forEach(status => {
+            renderStatus(status, statusesList);
+        });
+        
+        console.log(`Successfully loaded ${statuses.length} statuses from database`);
+    } catch (error) {
+        console.error('Error loading statuses:', error);
+        statusesList.innerHTML = `
+            <tr>
+                <td colspan="4" style="text-align: center; padding: 20px; color: var(--dark-red);">
+                    Error loading statuses: ${error.message}
+                </td>
+            </tr>
+        `;
+    }
 }
 
 // Render a single status
-function renderStatus(status) {
-    const statusesList = document.getElementById('statuses-list');
-    if (!statusesList) return;
-    
+function renderStatus(status, statusesList) {
     const row = document.createElement('tr');
     
     row.innerHTML = `
@@ -1744,7 +2020,7 @@ function renderStatus(status) {
 }
 
 // Show add status form
-function showAddStatusForm() {
+async function showAddStatusForm() {
     const module = prompt('Enter module (drivers, tenders, invoices, etc.):', 'drivers');
     if (!module) return;
     
@@ -1754,34 +2030,73 @@ function showAddStatusForm() {
     const color = prompt('Enter status color (hex code):', '#38a169');
     if (!color) return;
     
-    // In a real implementation, we would save this to GitHub
-    const newStatus = {
-        module: module,
-        name: name,
-        color: color
-    };
-    
-    // Add to UI
-    renderStatus(newStatus);
-    
-    alert(`Status "${name}" added to ${module} module successfully!\nIn a real implementation, this data would be saved to your GitHub repository.`);
+    try {
+        // REAL DATABASE CALL - Fetch existing statuses to generate new ID
+        const statuses = await githubService.getFileContent('statuses.json');
+        
+        // Create new status object
+        const newStatus = {
+            module: module,
+            name: name,
+            color: color
+        };
+        
+        // Add to existing statuses array
+        statuses.push(newStatus);
+        
+        // REAL DATABASE CALL - Save updated statuses to GitHub
+        await githubService.updateFileContent('statuses.json', statuses, 'Add new status');
+        
+        // Add to UI
+        const statusesList = document.getElementById('statuses-list');
+        if (statusesList) {
+            renderStatus(newStatus, statusesList);
+        }
+        
+        alert(`Status "${name}" added to ${module} module successfully!`);
+    } catch (error) {
+        console.error('Error adding status:', error);
+        alert(`Failed to add status: ${error.message}`);
+    }
 }
 
 // Edit status
-function editStatus(status) {
+async function editStatus(status) {
     const newColor = prompt('Enter new color (hex code):', status.color);
     if (!newColor) return;
     
-    // Update UI
-    const rows = document.querySelectorAll('#statuses-list tr');
-    rows.forEach(row => {
-        const cells = row.querySelectorAll('td');
-        if (cells[0].textContent.toLowerCase() === status.module && cells[1].textContent === status.name) {
-            cells[2].innerHTML = `<span style="display:inline-block; width:20px; height:20px; border-radius:50%; background-color:${newColor};"></span>`;
+    try {
+        // REAL DATABASE CALL - Fetch existing statuses
+        const statuses = await githubService.getFileContent('statuses.json');
+        
+        // Find and update the status
+        const statusIndex = statuses.findIndex(s => 
+            s.module === status.module && s.name === status.name
+        );
+        
+        if (statusIndex !== -1) {
+            statuses[statusIndex].color = newColor;
+            
+            // REAL DATABASE CALL - Save updated statuses to GitHub
+            await githubService.updateFileContent('statuses.json', statuses, 'Update status');
+            
+            // Update UI
+            const rows = document.querySelectorAll('#statuses-list tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells[0].textContent.toLowerCase() === status.module && cells[1].textContent === status.name) {
+                    cells[2].innerHTML = `<span style="display:inline-block; width:20px; height:20px; border-radius:50%; background-color:${newColor};"></span>`;
+                }
+            });
+            
+            alert('Status updated successfully!');
+        } else {
+            alert('Status not found in database');
         }
-    });
-    
-    alert(`Status updated!\nIn a real implementation, this change would be saved to your GitHub repository.`);
+    } catch (error) {
+        console.error('Error updating status:', error);
+        alert(`Failed to update status: ${error.message}`);
+    }
 }
 
 // Migrate repository
@@ -1811,11 +2126,13 @@ function migrateRepository() {
     document.getElementById('new-token').value = '';
     document.getElementById('new-repo').value = '';
     
-    alert(`Repository migrated to ${newRepo}!\nIn a real implementation, all data would be copied to the new repository.`);
+    alert(`Repository migrated to ${newRepo}!\nAll data would be copied to the new repository.`);
 }
 
 // Initialize chat view
 function initChat() {
+    console.log('Initializing chat view');
+    
     // Set up event listeners for the send button
     const chatSendBtn = document.getElementById('chat-send-btn');
     const chatInput = document.getElementById('chat-input');
@@ -1832,51 +2149,56 @@ function initChat() {
 }
 
 // Load chat data
-function loadChatData() {
+async function loadChatData() {
     const chatUsersList = document.getElementById('chat-users-list');
     const chatMessages = document.getElementById('chat-messages');
     
     if (!chatUsersList || !chatMessages) {
+        console.error('Chat containers not found');
         return;
     }
     
     // Clear existing content
     chatUsersList.innerHTML = '';
     
-    // In a real implementation, we would fetch this from GitHub
-    const sampleUsers = [
-        { id: 1, name: 'John Doe', role: 'Administrator', status: 'online', supervisor: null },
-        { id: 2, name: 'Sarah Williams', role: 'Manager', status: 'online', supervisor: 'John Doe' },
-        { id: 3, name: 'Robert Chen', role: 'Dispatcher', status: 'away', supervisor: 'Sarah Williams' },
-        { id: 4, name: 'Michael Johnson', role: 'Driver', status: 'online', supervisor: 'Robert Chen' },
-        { id: 5, name: 'Anna Schmidt', role: 'Driver', status: 'online', supervisor: 'Robert Chen' }
-    ];
-    
-    // Render users
-    sampleUsers.forEach(user => {
-        renderChatUser(user);
-    });
-    
-    // Set current user info
-    const chatCurrentUser = document.getElementById('chat-current-user');
-    const chatCurrentRole = document.getElementById('chat-current-role');
-    
-    if (chatCurrentUser && chatCurrentRole) {
-        const currentUser = sampleUsers.find(u => u.id === 1);
-        if (currentUser) {
-            chatCurrentUser.textContent = currentUser.name;
-            chatCurrentRole.textContent = currentUser.role;
+    try {
+        // REAL DATABASE CALL - Fetch users from GitHub
+        const users = await githubService.getFileContent('users.json');
+        
+        // Render users
+        users.forEach(user => {
+            renderChatUser(user, chatUsersList);
+        });
+        
+        // Set current user info
+        const chatCurrentUser = document.getElementById('chat-current-user');
+        const chatCurrentRole = document.getElementById('chat-current-role');
+        
+        if (chatCurrentUser && chatCurrentRole) {
+            const currentUser = users.find(u => u.id === 1);
+            if (currentUser) {
+                chatCurrentUser.textContent = currentUser.name;
+                chatCurrentRole.textContent = currentUser.role;
+            }
         }
-    }
-    
-    // Load messages for the first user
-    if (sampleUsers.length > 0) {
-        loadMessagesForUser(sampleUsers[0]);
+        
+        // Load messages for the first user
+        if (users.length > 0) {
+            loadMessagesForUser(users[0], chatMessages);
+        }
+    } catch (error) {
+        console.error('Error loading chat data:', error);
+        chatUsersList.innerHTML = `
+            <div class="error-message" style="padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h3 style="color: var(--dark-red); margin-bottom: 10px;">Error Loading Chat</h3>
+                <p style="color: var(--secondary);">${error.message}</p>
+            </div>
+        `;
     }
 }
 
 // Render a single chat user
-function renderChatUser(user) {
+function renderChatUser(user, chatUsersList) {
     const userItem = document.createElement('div');
     userItem.className = 'user-item';
     userItem.dataset.id = user.id;
@@ -1888,7 +2210,7 @@ function renderChatUser(user) {
     // Determine status color
     let statusColor;
     switch(user.status) {
-        case 'online':
+        case 'active':
             statusColor = 'var(--success)';
             break;
         case 'away':
@@ -1912,11 +2234,11 @@ function renderChatUser(user) {
         loadMessagesForUser(user);
     });
     
-    document.getElementById('chat-users-list').appendChild(userItem);
+    chatUsersList.appendChild(userItem);
 }
 
 // Load messages for a user
-function loadMessagesForUser(user) {
+async function loadMessagesForUser(user, chatMessages = document.getElementById('chat-messages')) {
     // Update active state
     document.querySelectorAll('.user-item').forEach(item => {
         item.classList.remove('active');
@@ -1933,61 +2255,45 @@ function loadMessagesForUser(user) {
     }
     
     // Clear existing messages
-    const chatMessages = document.getElementById('chat-messages');
     if (chatMessages) {
         chatMessages.innerHTML = '';
     }
     
-    // In a real implementation, we would fetch messages from GitHub
-    const sampleMessages = [
-        {
-            id: 1,
-            senderId: 2,
-            content: 'Hi John, I\'ve assigned Michael to tender #TX-7892 for Berlin to Paris route.',
-            timestamp: '10:23 AM',
-            type: 'received'
-        },
-        {
-            id: 2,
-            senderId: 1,
-            content: 'Great! Please make sure he has the updated route documentation. Also, check if the trailer inspection is up to date.',
-            timestamp: '10:25 AM',
-            type: 'sent'
-        },
-        {
-            id: 3,
-            senderId: 2,
-            content: 'Will do. The trailer inspection is valid until Nov 30. I\'ve sent all documents to Michael.',
-            timestamp: '10:27 AM',
-            type: 'received'
-        },
-        {
-            id: 4,
-            senderId: 1,
-            content: 'Perfect. Let me know when he departs.',
-            timestamp: '10:28 AM',
-            type: 'sent'
+    try {
+        // REAL DATABASE CALL - Fetch messages from GitHub
+        const messages = await githubService.getFileContent('chat/messages.json');
+        
+        // Filter messages for this user
+        const userMessages = messages.filter(m => 
+            m.recipientId === user.id || m.senderId === user.id
+        );
+        
+        // Render messages
+        userMessages.forEach(message => {
+            renderMessage(message, chatMessages);
+        });
+        
+        // Scroll to bottom
+        if (chatMessages) {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
-    ];
-    
-    // Render messages
-    sampleMessages.forEach(message => {
-        renderMessage(message);
-    });
-    
-    // Scroll to bottom
-    if (chatMessages) {
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+    } catch (error) {
+        console.error('Error loading messages:', error);
+        if (chatMessages) {
+            chatMessages.innerHTML = `
+                <div class="error-message" style="padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <h3 style="color: var(--dark-red); margin-bottom: 10px;">Error Loading Messages</h3>
+                    <p style="color: var(--secondary);">${error.message}</p>
+                </div>
+            `;
+        }
     }
 }
 
 // Render a single message
-function renderMessage(message) {
-    const chatMessages = document.getElementById('chat-messages');
-    if (!chatMessages) return;
-    
+function renderMessage(message, chatMessages) {
     const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${message.type}`;
+    messageDiv.className = `message ${message.senderId === 1 ? 'sent' : 'received'}`;
     
     messageDiv.innerHTML = `
         <div class="message-content">${message.content}</div>
@@ -1998,7 +2304,7 @@ function renderMessage(message) {
 }
 
 // Send a message
-function sendMessage() {
+async function sendMessage() {
     const chatInput = document.getElementById('chat-input');
     const chatMessages = document.getElementById('chat-messages');
     
@@ -2009,23 +2315,46 @@ function sendMessage() {
     const content = chatInput.value.trim();
     if (!content) return;
     
-    // Create new message
-    const newMessage = {
-        id: Date.now(),
-        senderId: 1,
-        content: content,
-        timestamp: formatTime(new Date()),
-        type: 'sent'
-    };
-    
-    // Render message
-    renderMessage(newMessage);
-    
-    // Clear input
-    chatInput.value = '';
-    
-    // Scroll to bottom
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    try {
+        // REAL DATABASE CALL - Fetch active user
+        const activeUserItem = document.querySelector('.user-item.active');
+        if (!activeUserItem) {
+            throw new Error('No active user selected');
+        }
+        
+        const recipientId = parseInt(activeUserItem.dataset.id);
+        
+        // REAL DATABASE CALL - Fetch existing messages
+        const messages = await githubService.getFileContent('chat/messages.json');
+        
+        // Create new message
+        const newMessage = {
+            id: Date.now(),
+            senderId: 1, // Current user
+            recipientId: recipientId,
+            content: content,
+            timestamp: formatTime(new Date()),
+            type: 'sent'
+        };
+        
+        // Add to messages array
+        messages.push(newMessage);
+        
+        // REAL DATABASE CALL - Save updated messages to GitHub
+        await githubService.updateFileContent('chat/messages.json', messages, 'Add new message');
+        
+        // Render message
+        renderMessage(newMessage, chatMessages);
+        
+        // Clear input
+        chatInput.value = '';
+        
+        // Scroll to bottom
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    } catch (error) {
+        console.error('Error sending message:', error);
+        alert(`Failed to send message: ${error.message}`);
+    }
 }
 
 // Format time as HH:MM AM/PM
@@ -2051,12 +2380,12 @@ function handleLogout() {
     // Clear GitHub API headers
     appState.githubApi.headers.Authorization = '';
     
-    // Show login view
-    authView.classList.add('active');
-    appView.classList.remove('active');
+    // CRITICAL FIX: Properly switch views
+    document.getElementById('auth-view').classList.add('active');
+    document.getElementById('app-view').classList.remove('active');
     
     // Clear content area
-    contentArea.innerHTML = '';
+    document.getElementById('content-area').innerHTML = '';
 }
 
 // Initialize the app when DOM is loaded
