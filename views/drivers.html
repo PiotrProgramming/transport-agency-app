@@ -1,0 +1,26 @@
+<div id="drivers-view" class="view">
+    <div class="page-title">
+        <h1 class="title-text">Drivers Management</h1>
+        <div class="action-buttons">
+            <button class="btn btn-outline">Import</button>
+            <button class="btn btn-primary" id="add-driver-btn">Add Driver</button>
+        </div>
+    </div>
+
+    <div class="data-table-container">
+        <div class="table-header">
+            <h2 class="table-title">Driver Database</h2>
+            <div class="table-filters">
+                <select class="form-control" id="drivers-status-filter">
+                    <option value="all">All Statuses</option>
+                    <option value="available">Available</option>
+                    <option value="on-duty">On Duty</option>
+                    <option value="maintenance">Maintenance</option>
+                </select>
+            </div>
+        </div>
+        <div id="drivers-list">
+            <!-- Drivers will be populated by JavaScript -->
+        </div>
+    </div>
+</div>
