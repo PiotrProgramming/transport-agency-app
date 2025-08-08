@@ -3,116 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TransLogix - Transport & Forwarding Management</title>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <!-- CSS Files -->
+    <title>Transport & Forwarding Agency</title>
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/auth.css">
-    <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/data-views.css">
-    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <!-- Auth Views (Login/Register) -->
+    <!-- Auth View -->
     <div id="auth-view" class="view active">
+        <!-- Authentication content -->
         <div class="auth-container">
-            <div class="auth-sidebar">
-                <div class="auth-logo">
-                    <div class="logo-icon">T</div>
-                    <div class="auth-logo-text">Trans<span>Logix</span></div>
-                </div>
-                <h1 class="auth-title">Transport & Forwarding Management</h1>
-                <p class="auth-description">
-                    Streamline your logistics operations with our comprehensive platform. 
-                    Manage drivers, vehicles, tenders, and invoices all in one place.
-                </p>
+            <div class="auth-tabs">
+                <div class="auth-tab active" data-tab="login">Login</div>
+                <div class="auth-tab" data-tab="register">Register</div>
             </div>
-            <div class="auth-content">
-                <div class="auth-form-container">
-                    <div class="auth-tabs">
-                        <div class="auth-tab active" data-tab="login">Login</div>
-                        <div class="auth-tab" data-tab="register">Register</div>
-                    </div>
-                    
-                    <!-- Login Form -->
-                    <div id="login-form" class="auth-form active">
-                        <div class="form-group">
-                            <label class="form-label">Email</label>
-                            <input type="email" class="form-control" placeholder="your@email.com" id="login-email">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Password</label>
-                            <input type="password" class="form-control" placeholder="••••••••" id="login-password">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">GitHub Token</label>
-                            <input type="password" class="form-control" placeholder="ghp_..." id="login-token">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Repository Name (owner/repo)</label>
-                            <input type="text" class="form-control" placeholder="company/transport-data" id="login-repo">
-                            <small class="form-text">Format: owner/repository-name</small>
-                        </div>
-                        <button class="btn btn-primary btn-auth" id="login-btn">Sign In</button>
-                        <button class="btn btn-outline github-login">
-                            <i class="fab fa-github"></i> Continue with GitHub
-                        </button>
-                    </div>
-                    
-                    <!-- Registration Form -->
-                    <div id="register-form" class="auth-form" style="display: none;">
-                        <div class="form-group">
-                            <label class="form-label">Email</label>
-                            <input type="email" class="form-control" placeholder="your@email.com" id="register-email">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Password</label>
-                            <input type="password" class="form-control" placeholder="••••••••" id="register-password">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">GitHub Token</label>
-                            <input type="password" class="form-control" placeholder="ghp_..." id="register-token">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Repository Name</label>
-                            <input type="text" class="form-control" placeholder="transport-data" id="register-repo">
-                            <small class="form-text">This will be created in your GitHub account</small>
-                        </div>
-                        <button class="btn btn-primary btn-auth" id="register-btn">Create Account</button>
-                    </div>
+            
+            <div id="login-form" class="auth-form">
+                <!-- Login form content -->
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" class="form-control" placeholder="your@email.com">
                 </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" class="form-control" placeholder="Password">
+                </div>
+                <div class="form-group">
+                    <label for="login-token">GitHub Token</label>
+                    <input type="password" id="login-token" class="form-control" placeholder="ghp_...">
+                </div>
+                <div class="form-group">
+                    <label for="login-repo">Repository (owner/repo)</label>
+                    <input type="text" id="login-repo" class="form-control" placeholder="username/repository">
+                </div>
+                <button id="login-btn" class="btn btn-primary">Login</button>
+            </div>
+            
+            <div id="register-form" class="auth-form" style="display: none;">
+                <!-- Register form content -->
+                <div class="form-group">
+                    <label for="register-email">Email</label>
+                    <input type="email" id="register-email" class="form-control" placeholder="your@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="register-password">Password</label>
+                    <input type="password" id="register-password" class="form-control" placeholder="Password">
+                </div>
+                <div class="form-group">
+                    <label for="register-token">GitHub Token</label>
+                    <input type="password" id="register-token" class="form-control" placeholder="ghp_...">
+                </div>
+                <div class="form-group">
+                    <label for="register-repo">Repository Name</label>
+                    <input type="text" id="register-repo" class="form-control" placeholder="my-transport-data">
+                </div>
+                <button id="register-btn" class="btn btn-primary">Register</button>
             </div>
         </div>
     </div>
 
-    <!-- Main Application View - Only a shell -->
+    <!-- App View -->
     <div id="app-view" class="view">
         <header>
             <div class="container">
                 <div class="header-content">
                     <div class="logo">
-                        <div class="logo-icon">T</div>
-                        <div class="logo-text">Trans<span>Logix</span></div>
+                        <h1>Transport & Forwarding Agency</h1>
                     </div>
-                    <div class="user-controls">
-                        <div class="notification-bell" id="notification-bell">
-                            <span class="bell-icon">🔔</span>
+                    <div class="header-actions">
+                        <div class="notification-icon" id="notification-bell">
+                            <i class="fas fa-bell"></i>
                             <span class="notification-badge">3</span>
-                            <div class="notification-dropdown" id="notification-dropdown">
-                                <div class="notification-header">
-                                    Notifications <span style="color:var(--accent);">3 New</span>
-                                </div>
+                            <div class="dropdown" id="notification-dropdown">
+                                <h3>Notifications</h3>
+                                <!-- Notifications will be added here -->
                             </div>
                         </div>
                         <div class="user-profile" id="user-profile">
-                            <div class="user-avatar">JD</div>
-                            <div class="user-name">John Doe</div>
-                            <div class="user-dropdown" id="user-dropdown">
-                                <div class="user-dropdown-item" id="logout-btn">Log Out</div>
+                            <i class="fas fa-user"></i>
+                            <span id="user-name">John Doe</span>
+                            <div class="dropdown" id="user-dropdown">
+                                <a href="#" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
                             </div>
                         </div>
                     </div>
@@ -120,62 +91,61 @@
             </div>
         </header>
 
-        <div class="container">
-            <div class="app-container">
-                <!-- Sidebar Navigation -->
-                <aside class="sidebar">
-                    <div class="menu-title">Main Menu</div>
-                    <ul class="nav-menu">
+        <div class="container app-container">
+            <aside class="sidebar">
+                <nav>
+                    <ul class="nav">
                         <li class="nav-item active" data-view="dashboard">
-                            <span class="nav-icon">📊</span>
+                            <i class="fas fa-home"></i>
                             <span>Dashboard</span>
                         </li>
                         <li class="nav-item" data-view="drivers">
-                            <span class="nav-icon">👨‍✈️</span>
-                            <span>Drivers Management</span>
+                            <i class="fas fa-users"></i>
+                            <span>Drivers</span>
                         </li>
                         <li class="nav-item" data-view="cars">
-                            <span class="nav-icon">🚛</span>
-                            <span>Cars Management</span>
+                            <i class="fas fa-truck"></i>
+                            <span>Cars</span>
                         </li>
                         <li class="nav-item" data-view="cards">
-                            <span class="nav-icon">💳</span>
-                            <span>Cards Management</span>
+                            <i class="fas fa-credit-card"></i>
+                            <span>Cards</span>
                         </li>
                         <li class="nav-item" data-view="tenders">
-                            <span class="nav-icon">📦</span>
-                            <span>Tenders Management</span>
+                            <i class="fas fa-file-invoice"></i>
+                            <span>Tenders</span>
                         </li>
                         <li class="nav-item" data-view="invoices">
-                            <span class="nav-icon">🧾</span>
-                            <span>Invoices Management</span>
+                            <i class="fas fa-file-invoice-dollar"></i>
+                            <span>Invoices</span>
                         </li>
                         <li class="nav-item" data-view="reports">
-                            <span class="nav-icon">📈</span>
-                            <span>Performance Reports</span>
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Reports</span>
                         </li>
                         <li class="nav-item" data-view="admin">
-                            <span class="nav-icon">🛡️</span>
-                            <span>Administration</span>
+                            <i class="fas fa-cog"></i>
+                            <span>Admin</span>
                         </li>
                         <li class="nav-item" data-view="chat">
-                            <span class="nav-icon">💬</span>
-                            <span>Chat System</span>
+                            <i class="fas fa-comments"></i>
+                            <span>Chat</span>
                         </li>
                     </ul>
-                </aside>
+                </nav>
+            </aside>
 
-                <!-- Main Content Area - Will load HTML fragments -->
-                <main class="content-area" id="content-area">
-                    <!-- Content will be loaded here via AJAX -->
-                </main>
-            </div>
+            <main class="content-area" id="content-area">
+                <!-- Content will be loaded here -->
+            </main>
         </div>
     </div>
 
-    <!-- JavaScript Files -->
-    <script src="js/app.js"></script>
+    <!-- Core JavaScript -->
     <script src="js/auth.js"></script>
-    <script src="js/notifications.js"></script>
+    <script src="js/app.js"></script>
+    
+    <!-- Module JavaScript - Load modules AFTER app.js -->
+    <script src="js/modules/drivers.js"></script>
 </body>
 </html>
