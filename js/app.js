@@ -133,18 +133,30 @@ function initViewModule(view) {
     // This is where we initialize our view-specific modules
     switch(view) {
         case 'drivers':
-            if (typeof DriversModule !== 'undefined') {
+            // Check if DriversModule is defined
+            if (typeof window.DriversModule !== 'undefined') {
                 DriversModule.init();
             } else {
                 console.error('DriversModule is not defined');
-                if (contentArea) {
-                    contentArea.innerHTML = `
-                        <div class="error-message">
-                            <h3>Module Error</h3>
-                            <p>Drivers module is not loaded. Please check your JavaScript files.</p>
-                        </div>
-                    `;
-                }
+                
+                // Wait a bit longer and try again (sometimes needed for module loading)
+                setTimeout(() => {
+                    if (typeof window.DriversModule !== 'undefined') {
+                        DriversModule.init();
+                    } else {
+                        if (contentArea) {
+                            contentArea.innerHTML = `
+                                <div class="error-message">
+                                    <h3>Module Error</h3>
+                                    <p>Drivers module is not loaded. Please check your JavaScript files.</p>
+                                    <div style="margin-top: 15px;">
+                                        <button class="btn btn-primary" onclick="location.reload()">Reload Page</button>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+                }, 300);
             }
             break;
         // Other views will be implemented similarly
