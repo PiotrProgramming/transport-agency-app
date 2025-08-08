@@ -1,150 +1,155 @@
-// Initialize notifications
-function initNotifications() {
-    // In a real implementation, we would set up event listeners for notification actions
-    setupNotificationActions();
+// Notifications Module
+var NotificationsModule = (function() {
+    // Initialize the notifications module
+    function init() {
+        console.log('Initializing Notifications Module');
+        loadNotifications();
+    }
     
-    // Check for notifications periodically
-    setInterval(checkForNotifications, 60000); // Every minute
-}
-
-// Setup notification actions
-function setupNotificationActions() {
-    document.addEventListener('click', (e) => {
-        if (e.target.closest('.notification-item')) {
-            const notificationId = e.target.closest('.notification-item').dataset.id;
-            if (notificationId) {
-                markNotificationAsRead(notificationId);
-            }
+    // Load notifications
+    async function loadNotifications() {
+        console.log('Loading notifications');
+        
+        // Ensure appState.notifications is initialized
+        if (!appState.notifications) {
+            appState.notifications = [];
         }
-    });
-}
-
-// Check for new notifications
-function checkForNotifications() {
-    // Ensure appState.notifications is initialized
-    if (!appState.notifications) {
-        appState.notifications = [];
+        
+        const notificationList = document.getElementById('notification-dropdown');
+        if (!notificationList) {
+            console.error('Notification dropdown not found');
+            return;
+        }
+        
+        // Clear existing notifications except header
+        while (notificationList.children.length > 1) {
+            notificationList.removeChild(notificationList.lastChild);
+        }
+        
+        try {
+            // REAL DATABASE CALL - Fetch notifications from GitHub
+            const tenders = await githubService.getFileContent('tenders.json');
+            const drivers = await githubService.getFileContent('drivers.json');
+            
+            // Generate notifications based on data
+            const notifications = [];
+            
+            // Driver license expirations
+            drivers.forEach(driver => {
+                const licenseExpiry = new Date(driver.licenseExpiry);
+                const today = new Date();
+                const daysUntilExpiry = Math.ceil((licenseExpiry - today) / (1000 * 60 * 60 * 24));
+                
+                if (daysUntilExpiry <= 7 && daysUntilExpiry >= 0) {
+                    notifications.push({
+                        id: `driver-license-${driver.id}`,
+                        title: 'Driver License Expiring',
+                        description: `${driver.firstName} ${driver.lastName}'s license expires in ${daysUntilExpiry} days`,
+                        time: 'Just now',
+                        type: 'warning'
+                    });
+                }
+            });
+            
+            // Tender delivery notifications
+            tenders.forEach(tender => {
+                if (tender.status === 'delivered') {
+                    notifications.push({
+                        id: `tender-delivered-${tender.id}`,
+                        title: 'Tender Delivered',
+                        description: `Tender #${tender.id} (${tender.route}) has been delivered`,
+                        time: 'Just now',
+                        type: 'info'
+                    });
+                }
+            });
+            
+            // Set notifications
+            appState.notifications = notifications;
+            
+            // Update badge count
+            const badge = document.querySelector('.notification-badge');
+            if (badge) {
+                badge.textContent = notifications.length > 0 ? notifications.length : '';
+            }
+            
+            // Add notifications to dropdown
+            notifications.forEach(notification => {
+                const notificationItem = document.createElement('div');
+                notificationItem.className = 'notification-item';
+                notificationItem.dataset.id = notification.id;
+                notificationItem.innerHTML = `
+                    <div class="notification-title">${notification.title}</div>
+                    <div class="notification-description">${notification.description}</div>
+                    <div class="notification-time">${notification.time}</div>
+                `;
+                notificationItem.addEventListener('click', () => {
+                    markNotificationAsRead(notification.id);
+                });
+                notificationList.appendChild(notificationItem);
+            });
+        } catch (error) {
+            console.error('Error loading notifications:', error);
+            
+            // Fallback to simple notifications if database access fails
+            const sampleNotifications = [
+                { id: 1, title: 'Driver License Expiring', time: '2 hours ago', read: false },
+                { id: 2, title: 'Tender #TX-7890 Delivered', time: '5 hours ago', read: false },
+                { id: 3, title: 'Invoice #INV-2023 Due Soon', time: '1 day ago', read: false }
+            ];
+            
+            appState.notifications = sampleNotifications;
+            
+            // Update badge count
+            const badge = document.querySelector('.notification-badge');
+            if (badge) {
+                badge.textContent = sampleNotifications.length;
+            }
+            
+            // Add notifications to dropdown
+            sampleNotifications.forEach(notification => {
+                const notificationItem = document.createElement('div');
+                notificationItem.className = 'notification-item';
+                notificationItem.dataset.id = notification.id;
+                notificationItem.innerHTML = `
+                    <div class="notification-title">${notification.title}</div>
+                    <div class="notification-time">${notification.time}</div>
+                `;
+                notificationItem.addEventListener('click', () => {
+                    markNotificationAsRead(notification.id);
+                });
+                notificationList.appendChild(notificationItem);
+            });
+        }
     }
     
-    // In a real implementation, we would check GitHub for new notifications
-    // For demo purposes, we'll simulate some notifications
-    
-    // Simulate a driver license expiring soon
-    const today = new Date();
-    const licenseExpiry = new Date();
-    licenseExpiry.setDate(today.getDate() + 7); // 7 days from now
-    
-    // Add notification if within 7 days
-    if (Math.floor((licenseExpiry - today) / (1000 * 60 * 60 * 24)) <= 7) {
-        addNotification({
-            id: Date.now(),
-            title: 'Driver License Expiring',
-            description: 'Michael Johnson\'s license expires in 7 days',
-            time: 'Just now',
-            type: 'warning'
-        });
-    }
-    
-    // Simulate an upcoming insurance expiry
-    const insuranceExpiry = new Date();
-    insuranceExpiry.setDate(today.getDate() + 10); // 10 days from now
-    
-    // Add notification if within 14 days
-    if (Math.floor((insuranceExpiry - today) / (1000 * 60 * 60 * 24)) <= 14) {
-        addNotification({
-            id: Date.now() + 1,
-            title: 'Insurance Expiring',
-            description: 'Tractor TR-102-AB insurance expires in 10 days',
-            time: 'Just now',
-            type: 'warning'
-        });
-    }
-}
-
-// Add a new notification
-function addNotification(notification) {
-    // Ensure appState.notifications is initialized
-    if (!appState.notifications) {
-        appState.notifications = [];
-    }
-    
-    // Don't add duplicate notifications
-    const exists = appState.notifications.some(n => 
-        n.title === notification.title && n.description === notification.description);
-    
-    if (exists) return;
-    
-    // Add to state
-    appState.notifications.unshift({
-        ...notification,
-        read: false
-    });
-    
-    // Update UI
-    updateNotificationUI();
-}
-
-// Update notification UI
-function updateNotificationUI() {
-    // Ensure appState.notifications is initialized
-    if (!appState.notifications) {
-        appState.notifications = [];
-    }
-    
-    const notificationDropdown = document.getElementById('notification-dropdown');
-    if (!notificationDropdown) return;
-    
-    // Clear existing notifications except header
-    while (notificationDropdown.children.length > 1) {
-        notificationDropdown.removeChild(notificationDropdown.lastChild);
-    }
-    
-    // Add notifications
-    appState.notifications.forEach(notification => {
-        const notificationItem = document.createElement('div');
-        notificationItem.className = 'notification-item';
-        notificationItem.dataset.id = notification.id;
-        if (notification.read) {
+    // Mark notification as read
+    function markNotificationAsRead(id) {
+        console.log(`Marking notification as read: ${id}`);
+        
+        // Ensure notifications array is initialized
+        if (!appState.notifications) {
+            appState.notifications = [];
+        }
+        
+        const notificationItem = document.querySelector(`.notification-item[data-id="${id}"]`);
+        if (notificationItem) {
+            notificationItem.style.backgroundColor = '#f7fafc';
             notificationItem.style.fontWeight = 'normal';
         }
-        notificationItem.innerHTML = `
-            <div class="notification-title">${notification.title}</div>
-            <div class="notification-time">${notification.time}</div>
-        `;
-        notificationItem.addEventListener('click', () => {
-            markNotificationAsRead(notification.id);
-        });
-        notificationDropdown.appendChild(notificationItem);
-    });
-    
-    // Update badge count
-    const unreadCount = appState.notifications.filter(n => !n.read).length;
-    const badge = document.querySelector('.notification-badge');
-    if (badge) {
-        badge.textContent = unreadCount > 0 ? unreadCount : '';
-    }
-}
-
-// Mark notification as read
-function markNotificationAsRead(id) {
-    // Ensure notifications array is initialized
-    if (!appState.notifications) {
-        appState.notifications = [];
+        
+        // Update badge count
+        const unreadCount = appState.notifications.filter(n => n.id !== id).length;
+        const badge = document.querySelector('.notification-badge');
+        if (badge) {
+            badge.textContent = unreadCount > 0 ? unreadCount : '';
+        }
     }
     
-    const notificationItem = document.querySelector(`.notification-item:nth-child(${id + 1})`);
-    if (notificationItem) {
-        notificationItem.style.backgroundColor = '#f7fafc';
-        notificationItem.style.fontWeight = 'normal';
-    }
-    
-    // Update badge count
-    const unreadCount = appState.notifications.filter(n => !n.read).length - 1;
-    const badge = document.querySelector('.notification-badge');
-    if (badge) {
-        badge.textContent = unreadCount > 0 ? unreadCount : '';
-    }
-}
-
-// Initialize notifications when DOM is loaded
-document.addEventListener('DOMContentLoaded', initNotifications);
+    // Public API
+    return {
+        init: init,
+        loadNotifications: loadNotifications,
+        markAsRead: markNotificationAsRead
+    };
+})();
