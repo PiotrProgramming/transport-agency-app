@@ -4,62 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Transport & Forwarding Agency</title>
+    <!-- Core CSS -->
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/data-views.css">
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <!-- Auth View -->
     <div id="auth-view" class="view active">
-        <!-- Authentication content -->
-        <div class="auth-container">
-            <div class="auth-tabs">
-                <div class="auth-tab active" data-tab="login">Login</div>
-                <div class="auth-tab" data-tab="register">Register</div>
-            </div>
-            
-            <div id="login-form" class="auth-form">
-                <!-- Login form content -->
-                <div class="form-group">
-                    <label for="login-email">Email</label>
-                    <input type="email" id="login-email" class="form-control" placeholder="your@email.com">
-                </div>
-                <div class="form-group">
-                    <label for="login-password">Password</label>
-                    <input type="password" id="login-password" class="form-control" placeholder="Password">
-                </div>
-                <div class="form-group">
-                    <label for="login-token">GitHub Token</label>
-                    <input type="password" id="login-token" class="form-control" placeholder="ghp_...">
-                </div>
-                <div class="form-group">
-                    <label for="login-repo">Repository (owner/repo)</label>
-                    <input type="text" id="login-repo" class="form-control" placeholder="username/repository">
-                </div>
-                <button id="login-btn" class="btn btn-primary">Login</button>
-            </div>
-            
-            <div id="register-form" class="auth-form" style="display: none;">
-                <!-- Register form content -->
-                <div class="form-group">
-                    <label for="register-email">Email</label>
-                    <input type="email" id="register-email" class="form-control" placeholder="your@email.com">
-                </div>
-                <div class="form-group">
-                    <label for="register-password">Password</label>
-                    <input type="password" id="register-password" class="form-control" placeholder="Password">
-                </div>
-                <div class="form-group">
-                    <label for="register-token">GitHub Token</label>
-                    <input type="password" id="register-token" class="form-control" placeholder="ghp_...">
-                </div>
-                <div class="form-group">
-                    <label for="register-repo">Repository Name</label>
-                    <input type="text" id="register-repo" class="form-control" placeholder="my-transport-data">
-                </div>
-                <button id="register-btn" class="btn btn-primary">Register</button>
-            </div>
-        </div>
+        <!-- Authentication content will be loaded here -->
     </div>
 
     <!-- App View -->
@@ -73,10 +29,9 @@
                     <div class="header-actions">
                         <div class="notification-icon" id="notification-bell">
                             <i class="fas fa-bell"></i>
-                            <span class="notification-badge">3</span>
+                            <span class="notification-badge">0</span>
                             <div class="dropdown" id="notification-dropdown">
                                 <h3>Notifications</h3>
-                                <!-- Notifications will be added here -->
                             </div>
                         </div>
                         <div class="user-profile" id="user-profile">
@@ -142,10 +97,54 @@
     </div>
 
     <!-- Core JavaScript -->
+    <script>
+        // Application State - Must be defined first
+        const appState = {
+            currentView: 'dashboard',
+            isAuthenticated: false,
+            currentUser: null,
+            token: null,
+            repo: null,
+            githubUsername: null,
+            notifications: [],
+            githubApi: {
+                baseUrl: 'https://api.github.com',
+                headers: {
+                    'Authorization': '',
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                }
+            },
+            modules: {
+                drivers: null,
+                cars: null,
+                cards: null,
+                tenders: null,
+                invoices: null,
+                reports: null,
+                admin: null,
+                chat: null,
+                notifications: null
+            }
+        };
+    </script>
+    
+    <!-- Authentication (leave untouched as requested) -->
     <script src="js/auth.js"></script>
+    
+    <!-- Main Application -->
     <script src="js/app.js"></script>
     
-    <!-- Module JavaScript - Load modules AFTER app.js -->
+    <!-- Module Definitions (loaded after app.js) -->
+    <script src="js/modules/notifications.js"></script>
+    <script src="js/modules/dashboard.js"></script>
     <script src="js/modules/drivers.js"></script>
+    <script src="js/modules/cars.js"></script>
+    <script src="js/modules/cards.js"></script>
+    <script src="js/modules/tenders.js"></script>
+    <script src="js/modules/invoices.js"></script>
+    <script src="js/modules/reports.js"></script>
+    <script src="js/modules/admin.js"></script>
+    <script src="js/modules/chat.js"></script>
 </body>
 </html>
