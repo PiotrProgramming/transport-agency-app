@@ -7,18 +7,61 @@
     <!-- Core CSS -->
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/components.css">
-    <link rel="stylesheet" href="css/dashboard.css">
-    <link rel="stylesheet" href="css/data-views.css">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <!-- Auth View -->
     <div id="auth-view" class="view active">
-        <!-- Authentication content will be loaded here -->
+        <div class="auth-container">
+            <div class="auth-tabs">
+                <div class="auth-tab active" data-tab="login">Login</div>
+                <div class="auth-tab" data-tab="register">Register</div>
+            </div>
+            
+            <div id="login-form" class="auth-form">
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" class="form-control" placeholder="your@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" class="form-control" placeholder="Password">
+                </div>
+                <div class="form-group">
+                    <label for="login-token">GitHub Token</label>
+                    <input type="password" id="login-token" class="form-control" placeholder="ghp_...">
+                </div>
+                <div class="form-group">
+                    <label for="login-repo">Repository (owner/repo)</label>
+                    <input type="text" id="login-repo" class="form-control" placeholder="username/repository">
+                </div>
+                <button id="login-btn" class="btn btn-primary">Login</button>
+            </div>
+            
+            <div id="register-form" class="auth-form" style="display: none;">
+                <div class="form-group">
+                    <label for="register-email">Email</label>
+                    <input type="email" id="register-email" class="form-control" placeholder="your@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="register-password">Password</label>
+                    <input type="password" id="register-password" class="form-control" placeholder="Password">
+                </div>
+                <div class="form-group">
+                    <label for="register-token">GitHub Token</label>
+                    <input type="password" id="register-token" class="form-control" placeholder="ghp_...">
+                </div>
+                <div class="form-group">
+                    <label for="register-repo">Repository Name</label>
+                    <input type="text" id="register-repo" class="form-control" placeholder="my-transport-data">
+                </div>
+                <button id="register-btn" class="btn btn-primary">Register</button>
+            </div>
+        </div>
     </div>
 
-    <!-- App View -->
+    <!-- App View (hidden initially) -->
     <div id="app-view" class="view">
         <header>
             <div class="container">
@@ -110,21 +153,161 @@
         };
     </script>
     
-    <!-- Authentication (leave untouched as requested) -->
-    <script src="js/auth.js"></script>
-    
-    <!-- Main Application -->
-    <script src="js/app.js"></script>
-    
-    <!-- Module Definitions (loaded after app.js) -->
-    <script src="js/modules/dashboard.js"></script>
-    <script src="js/modules/drivers.js"></script>
-    <script src="js/modules/cars.js"></script>
-    <script src="js/modules/cards.js"></script>
-    <script src="js/modules/tenders.js"></script>
-    <script src="js/modules/invoices.js"></script>
-    <script src="js/modules/reports.js"></script>
-    <script src="js/modules/admin.js"></script>
-    <script src="js/modules/chat.js"></script>
+    <!-- Authentication -->
+    <script>
+        // DOM Elements
+        const authTabs = document.querySelectorAll('.auth-tab');
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const loginBtn = document.getElementById('login-btn');
+        const registerBtn = document.getElementById('register-btn');
+
+        // Initialize authentication
+        function initAuth() {
+            // Auth tab switching
+            authTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    authTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    const tabName = tab.getAttribute('data-tab');
+                    loginForm.style.display = tabName === 'login' ? 'block' : 'none';
+                    registerForm.style.display = tabName === 'register' ? 'block' : 'none';
+                });
+            });
+
+            // Login functionality
+            if (loginBtn) {
+                loginBtn.addEventListener('click', handleLogin);
+            }
+
+            // Registration functionality
+            if (registerBtn) {
+                registerBtn.addEventListener('click', handleRegistration);
+            }
+            
+            // Logout button
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', handleLogout);
+            }
+        }
+
+        // Handle login
+        function handleLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const token = document.getElementById('login-token').value;
+            const repo = document.getElementById('login-repo').value;
+            
+            // Basic validation
+            if (!email || !password || !token || !repo) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            // Set application state
+            appState.isAuthenticated = true;
+            appState.currentUser = { 
+                name: email.split('@')[0].replace('.', ' ').replace(/^\w/, c => c.toUpperCase()),
+                email: email 
+            };
+            appState.token = token;
+            appState.repo = repo;
+            
+            // Switch to app view
+            document.getElementById('auth-view').classList.remove('active');
+            document.getElementById('app-view').classList.add('active');
+            
+            // For now, just show a success message
+            document.getElementById('content-area').innerHTML = `
+                <div class="view-placeholder">
+                    <h2>Login Successful!</h2>
+                    <p>You are now logged in as ${appState.currentUser.name}</p>
+                    <p>Repository: ${appState.repo}</p>
+                    <button class="btn btn-primary" id="dashboard-btn">Go to Dashboard</button>
+                </div>
+            `;
+            
+            // Set up dashboard button
+            document.getElementById('dashboard-btn').addEventListener('click', () => {
+                document.getElementById('content-area').innerHTML = `
+                    <div class="view-placeholder">
+                        <h2>Dashboard</h2>
+                        <p>This is where the dashboard content would appear.</p>
+                        <p>GitHub Token: ${appState.token.substring(0, 10)}...</p>
+                        <p>Repository: ${appState.repo}</p>
+                    </div>
+                `;
+            });
+        }
+
+        // Handle registration
+        function handleRegistration() {
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const token = document.getElementById('register-token').value;
+            const repoName = document.getElementById('register-repo').value;
+            
+            // Basic validation
+            if (!email || !password || !token || !repoName) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            // Set application state
+            appState.isAuthenticated = true;
+            appState.currentUser = { 
+                name: email.split('@')[0].replace('.', ' ').replace(/^\w/, c => c.toUpperCase()),
+                email: email 
+            };
+            appState.token = token;
+            appState.repo = `${appState.githubUsername || 'your-username'}/${repoName}`;
+            
+            // Switch to app view
+            document.getElementById('auth-view').classList.remove('active');
+            document.getElementById('app-view').classList.add('active');
+            
+            // Show success message
+            document.getElementById('content-area').innerHTML = `
+                <div class="view-placeholder">
+                    <h2>Registration Successful!</h2>
+                    <p>You are now logged in as ${appState.currentUser.name}</p>
+                    <p>Repository: ${appState.repo}</p>
+                    <button class="btn btn-primary" id="dashboard-btn">Go to Dashboard</button>
+                </div>
+            `;
+            
+            // Set up dashboard button
+            document.getElementById('dashboard-btn').addEventListener('click', () => {
+                document.getElementById('content-area').innerHTML = `
+                    <div class="view-placeholder">
+                        <h2>Dashboard</h2>
+                        <p>This is where the dashboard content would appear.</p>
+                        <p>GitHub Token: ${appState.token.substring(0, 10)}...</p>
+                        <p>Repository: ${appState.repo}</p>
+                    </div>
+                `;
+            });
+        }
+
+        // Logout functionality
+        function handleLogout() {
+            appState.isAuthenticated = false;
+            appState.currentUser = null;
+            appState.token = null;
+            appState.repo = null;
+            appState.githubUsername = null;
+            
+            // Switch to auth view
+            document.getElementById('auth-view').classList.add('active');
+            document.getElementById('app-view').classList.remove('active');
+        }
+
+        // Initialize auth when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            initAuth();
+        });
+    </script>
 </body>
 </html>
