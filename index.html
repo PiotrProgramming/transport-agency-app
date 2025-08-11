@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <!-- Auth View -->
+    <!-- Auth View - Full screen login -->
     <div id="auth-view" class="view active">
         <div class="auth-container">
             <div class="auth-tabs">
@@ -62,7 +62,7 @@
         </div>
     </div>
 
-    <!-- App View (hidden initially) -->
+    <!-- App View - Full screen application (hidden initially) -->
     <div id="app-view" class="view">
         <header>
             <div class="container">
@@ -152,69 +152,14 @@
             githubUsername: null,
             notifications: []
         };
-    </script>
-    
-    <!-- Authentication -->
-    <script>
-        // DOM Elements
-        const authTabs = document.querySelectorAll('.auth-tab');
-        const loginForm = document.getElementById('login-form');
-        const registerForm = document.getElementById('register-form');
-        const loginBtn = document.getElementById('login-btn');
-        const registerBtn = document.getElementById('register-btn');
         
-        // App View Elements
+        // DOM Elements
         let authView, appView, contentArea, navItems, notificationBell, notificationDropdown, 
             userProfile, userDropdown, logoutBtn;
-
-        // Initialize authentication
-        function initAuth() {
-            // Auth tab switching
-            authTabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    authTabs.forEach(t => t.classList.remove('active'));
-                    tab.classList.add('active');
-                    
-                    const tabName = tab.getAttribute('data-tab');
-                    loginForm.style.display = tabName === 'login' ? 'block' : 'none';
-                    registerForm.style.display = tabName === 'register' ? 'block' : 'none';
-                });
-            });
-
-            // Login functionality
-            if (loginBtn) {
-                loginBtn.addEventListener('click', handleLogin);
-            }
-
-            // Registration functionality
-            if (registerBtn) {
-                registerBtn.addEventListener('click', handleRegistration);
-            }
-        }
-
-        // Handle login
-        function handleLogin() {
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            const token = document.getElementById('login-token').value;
-            const repo = document.getElementById('login-repo').value;
-            
-            // Basic validation
-            if (!email || !password || !token || !repo) {
-                alert('Please fill in all fields');
-                return;
-            }
-            
-            // Set application state
-            appState.isAuthenticated = true;
-            appState.currentUser = { 
-                name: email.split('@')[0].replace('.', ' ').replace(/^\w/, c => c.toUpperCase()),
-                email: email 
-            };
-            appState.token = token;
-            appState.repo = repo;
-            
-            // Initialize app view elements
+        
+        // Initialize the application
+        function initApp() {
+            // Initialize DOM elements
             authView = document.getElementById('auth-view');
             appView = document.getElementById('app-view');
             contentArea = document.getElementById('content-area');
@@ -225,118 +170,10 @@
             userDropdown = document.getElementById('user-dropdown');
             logoutBtn = document.getElementById('logout-btn');
             
-            // Switch to app view
-            authView.classList.remove('active');
-            appView.classList.add('active');
+            // Check authentication status
+            checkAuthStatus();
             
-            // Update user name in header
-            document.getElementById('user-name').textContent = appState.currentUser.name;
-            
-            // Load the dashboard view
-            loadView('dashboard');
-        }
-
-        // Handle registration
-        function handleRegistration() {
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-            const token = document.getElementById('register-token').value;
-            const repoName = document.getElementById('register-repo').value;
-            
-            // Basic validation
-            if (!email || !password || !token || !repoName) {
-                alert('Please fill in all fields');
-                return;
-            }
-            
-            // Set application state
-            appState.isAuthenticated = true;
-            appState.currentUser = { 
-                name: email.split('@')[0].replace('.', ' ').replace(/^\w/, c => c.toUpperCase()),
-                email: email 
-            };
-            appState.token = token;
-            appState.repo = `${appState.githubUsername || 'your-username'}/${repoName}`;
-            
-            // Initialize app view elements
-            authView = document.getElementById('auth-view');
-            appView = document.getElementById('app-view');
-            contentArea = document.getElementById('content-area');
-            navItems = document.querySelectorAll('.nav-item');
-            notificationBell = document.getElementById('notification-bell');
-            notificationDropdown = document.getElementById('notification-dropdown');
-            userProfile = document.getElementById('user-profile');
-            userDropdown = document.getElementById('user-dropdown');
-            logoutBtn = document.getElementById('logout-btn');
-            
-            // Switch to app view
-            authView.classList.remove('active');
-            appView.classList.add('active');
-            
-            // Update user name in header
-            document.getElementById('user-name').textContent = appState.currentUser.name;
-            
-            // Load the dashboard view
-            loadView('dashboard');
-        }
-
-        // Load a view fragment
-        function loadView(view) {
-            console.log(`Loading view: ${view}`);
-            
-            // Update navigation highlights
-            if (navItems) {
-                navItems.forEach(i => i.classList.remove('active'));
-                const activeNavItem = document.querySelector(`.nav-item[data-view="${view}"]`);
-                if (activeNavItem) activeNavItem.classList.add('active');
-            }
-            
-            // Load the HTML fragment
-            fetch(`views/${view}.html`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Failed to load ${view} view (HTTP ${response.status})`);
-                    }
-                    return response.text();
-                })
-                .then(html => {
-                    // Insert the HTML into the content area
-                    if (contentArea) {
-                        contentArea.innerHTML = html;
-                        
-                        // Store the current view
-                        appState.currentView = view;
-                        
-                        // Initialize view-specific JavaScript
-                        if (view === 'dashboard') {
-                            initDashboard();
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error(error);
-                    if (contentArea) {
-                        contentArea.innerHTML = `
-                            <div class="error-message">
-                                <h3>Error Loading View</h3>
-                                <p>${error.message}</p>
-                                <button class="btn btn-primary" onclick="loadView('${appState.currentView}')">Retry</button>
-                            </div>
-                        `;
-                    }
-                });
-        }
-
-        // Initialize dashboard view
-        function initDashboard() {
-            console.log('Initializing dashboard view');
-            
-            // Update the user name in the header
-            if (appState.currentUser) {
-                document.getElementById('user-name').textContent = appState.currentUser.name;
-            }
-            
-            // Set up navigation
+            // Navigation
             if (navItems) {
                 navItems.forEach(item => {
                     item.addEventListener('click', () => {
@@ -362,11 +199,6 @@
                 });
             }
             
-            // Logout button
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', handleLogout);
-            }
-            
             // Close dropdowns when clicking outside
             document.addEventListener('click', (e) => {
                 if (notificationBell && !notificationBell.contains(e.target)) {
@@ -377,32 +209,364 @@
                 }
             });
         }
-
-        // Logout functionality
+        
+        // Check authentication status
+        function checkAuthStatus() {
+            // Make sure notifications array is initialized
+            if (!appState.notifications) {
+                appState.notifications = [];
+            }
+            
+            // In a real implementation, we would check for stored credentials
+            if (appState.isAuthenticated) {
+                // Force auth view to be hidden and app view to be visible
+                if (authView) {
+                    authView.style.display = 'none';
+                    authView.classList.remove('active');
+                }
+                if (appView) {
+                    appView.style.display = 'block';
+                    appView.classList.add('active');
+                }
+                
+                // Load the dashboard view
+                loadView(appState.currentView || 'dashboard');
+            } else {
+                // Force auth view to be visible and app view to be hidden
+                if (authView) {
+                    authView.style.display = 'flex';
+                    authView.classList.add('active');
+                }
+                if (appView) {
+                    appView.style.display = 'none';
+                    appView.classList.remove('active');
+                }
+            }
+        }
+        
+        // Load a view fragment
+        function loadView(view) {
+            // Update navigation highlights
+            if (navItems) {
+                navItems.forEach(i => i.classList.remove('active'));
+                const activeNavItem = document.querySelector(`.nav-item[data-view="${view}"]`);
+                if (activeNavItem) activeNavItem.classList.add('active');
+            }
+            
+            // Show loading state
+            if (contentArea) {
+                contentArea.innerHTML = `
+                    <div class="view-placeholder">
+                        <div class="loading-indicator">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                        <p>Loading ${view}...</p>
+                    </div>
+                `;
+            }
+            
+            // Load the HTML fragment
+            fetch(`views/${view}.html`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Failed to load ${view} view (HTTP ${response.status})`);
+                    }
+                    return response.text();
+                })
+                .then(html => {
+                    // Insert the HTML into the content area
+                    if (contentArea) {
+                        contentArea.innerHTML = html;
+                        
+                        // Store the current view
+                        appState.currentView = view;
+                        
+                        // Initialize view-specific JavaScript
+                        initView(view);
+                    }
+                })
+                .catch(error => {
+                    console.error(error);
+                    if (contentArea) {
+                        contentArea.innerHTML = `
+                            <div class="error-message">
+                                <h3>Error Loading View</h3>
+                                <p>${error.message}</p>
+                                <button class="btn btn-primary" onclick="loadView('${appState.currentView}')">Retry</button>
+                            </div>
+                        `;
+                    }
+                });
+        }
+        
+        // Initialize view-specific JavaScript
+        function initView(view) {
+            switch(view) {
+                case 'dashboard':
+                    initDashboard();
+                    break;
+                case 'drivers':
+                    initDrivers();
+                    break;
+                case 'cars':
+                    initCars();
+                    break;
+                case 'cards':
+                    initCards();
+                    break;
+                case 'tenders':
+                    initTenders();
+                    break;
+                case 'invoices':
+                    initInvoices();
+                    break;
+                case 'reports':
+                    initReports();
+                    break;
+                case 'admin':
+                    initAdmin();
+                    break;
+                case 'chat':
+                    initChat();
+                    break;
+            }
+        }
+        
+        // Initialize dashboard view
+        function initDashboard() {
+            console.log('Initializing dashboard view');
+            
+            // Update user name in header
+            if (appState.currentUser) {
+                document.getElementById('user-name').textContent = appState.currentUser.name;
+            }
+        }
+        
+        // Initialize drivers view
+        function initDrivers() {
+            console.log('Initializing drivers view');
+            
+            // Set up event listeners for the add driver button
+            const addDriverBtn = document.getElementById('add-driver-btn');
+            if (addDriverBtn && !addDriverBtn.dataset.initialized) {
+                addDriverBtn.addEventListener('click', showAddDriverForm);
+                addDriverBtn.dataset.initialized = 'true';
+            }
+            
+            // Set up status filter
+            const statusFilter = document.getElementById('drivers-status-filter');
+            if (statusFilter && !statusFilter.dataset.initialized) {
+                statusFilter.addEventListener('change', filterDrivers);
+                statusFilter.dataset.initialized = 'true';
+            }
+            
+            // Load drivers data
+            loadDriversData();
+        }
+        
+        // Load drivers data
+        function loadDriversData() {
+            const driversList = document.getElementById('drivers-list');
+            if (!driversList) {
+                console.error('Drivers list container not found');
+                return;
+            }
+            
+            driversList.innerHTML = `
+                <div class="view-placeholder">
+                    <div class="loading-indicator">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <p>Loading drivers data...</p>
+                </div>
+            `;
+            
+            // Simulate data loading
+            setTimeout(() => {
+                driversList.innerHTML = `
+                    <div class="view-placeholder">
+                        <h3>Drivers Data Loaded</h3>
+                        <p>Real data would come from GitHub repository</p>
+                    </div>
+                `;
+            }, 500);
+        }
+        
+        // Show add driver form
+        function showAddDriverForm() {
+            alert('Add driver form would appear here.\nIn a real implementation, this would save to your GitHub repository.');
+        }
+        
+        // Filter drivers by status
+        function filterDrivers() {
+            console.log('Filtering drivers by status');
+        }
+        
+        // Handle logout
         function handleLogout() {
+            // Reset application state
             appState.isAuthenticated = false;
             appState.currentUser = null;
             appState.token = null;
             appState.repo = null;
             appState.githubUsername = null;
             
-            // Switch to auth view
-            authView.classList.add('active');
-            appView.classList.remove('active');
+            // Force auth view to be visible and app view to be hidden
+            if (authView) {
+                authView.style.display = 'flex';
+                authView.classList.add('active');
+            }
+            if (appView) {
+                appView.style.display = 'none';
+                appView.classList.remove('active');
+            }
             
             // Clear content area
             if (contentArea) contentArea.innerHTML = '';
             
             // Reset auth forms
-            loginForm.style.display = 'block';
-            registerForm.style.display = 'none';
-            authTabs.forEach(t => t.classList.remove('active'));
-            authTabs[0].classList.add('active');
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+            const authTabs = document.querySelectorAll('.auth-tab');
+            
+            if (loginForm) loginForm.style.display = 'block';
+            if (registerForm) registerForm.style.display = 'none';
+            if (authTabs) {
+                authTabs.forEach(t => t.classList.remove('active'));
+                authTabs[0].classList.add('active');
+            }
         }
-
-        // Initialize auth when DOM is loaded
+        
+        // Authentication functions
+        function handleLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const token = document.getElementById('login-token').value;
+            const repo = document.getElementById('login-repo').value;
+            
+            // Basic validation
+            if (!email || !password || !token || !repo) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            // Set application state
+            appState.isAuthenticated = true;
+            appState.currentUser = { 
+                name: email.split('@')[0].replace('.', ' ').replace(/^\w/, c => c.toUpperCase()),
+                email: email 
+            };
+            appState.token = token;
+            appState.repo = repo;
+            
+            // Update user name in header
+            document.getElementById('user-name').textContent = appState.currentUser.name;
+            
+            // Force auth view to be hidden and app view to be visible
+            if (authView) {
+                authView.style.display = 'none';
+                authView.classList.remove('active');
+            }
+            if (appView) {
+                appView.style.display = 'block';
+                appView.classList.add('active');
+            }
+            
+            // Load the dashboard view
+            loadView('dashboard');
+        }
+        
+        function handleRegistration() {
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const token = document.getElementById('register-token').value;
+            const repoName = document.getElementById('register-repo').value;
+            
+            // Basic validation
+            if (!email || !password || !token || !repoName) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            // Set application state
+            appState.isAuthenticated = true;
+            appState.currentUser = { 
+                name: email.split('@')[0].replace('.', ' ').replace(/^\w/, c => c.toUpperCase()),
+                email: email 
+            };
+            appState.token = token;
+            appState.repo = `${appState.githubUsername || 'your-username'}/${repoName}`;
+            
+            // Update user name in header
+            document.getElementById('user-name').textContent = appState.currentUser.name;
+            
+            // Force auth view to be hidden and app view to be visible
+            if (authView) {
+                authView.style.display = 'none';
+                authView.classList.remove('active');
+            }
+            if (appView) {
+                appView.style.display = 'block';
+                appView.classList.add('active');
+            }
+            
+            // Load the dashboard view
+            loadView('dashboard');
+        }
+        
+        // Initialize auth
+        function initAuth() {
+            const authTabs = document.querySelectorAll('.auth-tab');
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+            const loginBtn = document.getElementById('login-btn');
+            const registerBtn = document.getElementById('register-btn');
+            
+            // Auth tab switching
+            authTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    authTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    const tabName = tab.getAttribute('data-tab');
+                    loginForm.style.display = tabName === 'login' ? 'block' : 'none';
+                    registerForm.style.display = tabName === 'register' ? 'block' : 'none';
+                });
+            });
+            
+            // Login functionality
+            if (loginBtn) {
+                loginBtn.addEventListener('click', handleLogin);
+            }
+            
+            // Registration functionality
+            if (registerBtn) {
+                registerBtn.addEventListener('click', handleRegistration);
+            }
+            
+            // Logout button
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', handleLogout);
+            }
+        }
+        
+        // Initialize the app when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialize authentication
             initAuth();
+            
+            // Initialize app
+            initApp();
+            
+            // If we're already authenticated, load initial data
+            if (appState.isAuthenticated) {
+                loadView(appState.currentView || 'dashboard');
+            }
         });
     </script>
 </body>
