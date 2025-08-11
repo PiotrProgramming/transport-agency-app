@@ -24,31 +24,40 @@ body {
     color: var(--secondary);
     line-height: 1.6;
     font-family: 'Inter', sans-serif;
+    height: 100vh;
+    overflow: hidden;
 }
 
 .container {
     max-width: 1400px;
     margin: 0 auto;
     padding: 0 20px;
+    height: 100%;
 }
 
-/* View Container */
+/* View Container - CRITICAL FIX */
 .view {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     display: none;
-    height: 100vh;
+    z-index: 100;
+    background-color: var(--primary);
+    overflow: auto;
 }
 
 .view.active {
     display: block;
 }
 
-/* Auth View */
+/* Auth View - Full screen */
 #auth-view {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
-    background-color: var(--primary);
+    background-color: var(--light-gray);
 }
 
 .auth-container {
@@ -116,6 +125,9 @@ body {
     font-weight: 600;
     cursor: pointer;
     transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .btn-primary {
@@ -125,11 +137,52 @@ body {
 
 .btn-primary:hover {
     background-color: var(--dark-red);
+    transform: translateY(-2px);
+}
+
+.btn-outline {
+    background-color: transparent;
+    border: 1px solid var(--secondary);
+    color: var(--secondary);
+}
+
+.btn-outline:hover {
+    background-color: var(--light-gray);
+}
+
+.status-badge {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.status-available {
+    background-color: rgba(56, 161, 105, 0.15);
+    color: var(--success);
+}
+
+.status-pending {
+    background-color: rgba(221, 107, 32, 0.15);
+    color: var(--warning);
+}
+
+.status-delivered {
+    background-color: rgba(49, 130, 206, 0.15);
+    color: var(--info);
+}
+
+.status-cancelled {
+    background-color: rgba(197, 48, 48, 0.15);
+    color: var(--dark-red);
 }
 
 /* App View */
 #app-view {
-    height: 100vh;
+    display: none;
+    height: 100%;
+    overflow: hidden;
 }
 
 header {
@@ -193,6 +246,7 @@ header {
 .app-container {
     display: flex;
     height: calc(100% - 60px);
+    min-height: calc(100vh - 60px);
 }
 
 .sidebar {
@@ -200,6 +254,8 @@ header {
     background-color: var(--primary);
     border-right: 1px solid var(--medium-gray);
     padding: 20px 0;
+    height: 100%;
+    overflow-y: auto;
 }
 
 .nav {
@@ -229,16 +285,92 @@ header {
     flex: 1;
     padding: 25px;
     background-color: var(--primary);
+    height: 100%;
+    overflow-y: auto;
 }
 
+.page-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    height: 40px;
+}
+
+.title-text {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--secondary);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+/* View Placeholder & Loading */
 .view-placeholder {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     height: 100%;
-    text-align: center;
+    color: var(--medium-gray);
+    min-height: 300px;
+}
+
+.loading-indicator {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 40px;
+    margin-bottom: 15px;
+}
+
+.loading-indicator span {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: var(--accent);
+    margin: 0 4px;
+    animation: loading 1.4s infinite ease-in-out both;
+}
+
+.loading-indicator span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.loading-indicator span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes loading {
+    0%, 80%, 100% {
+        transform: scale(0);
+    } 
+    40% {
+        transform: scale(1);
+    }
+}
+
+.error-message {
     padding: 20px;
+    background: #fff;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    margin: 20px 0;
+    text-align: center;
+}
+
+.error-message h3 {
+    color: var(--dark-red);
+    margin-bottom: 10px;
+}
+
+.error-message p {
+    color: var(--secondary);
+    margin-bottom: 15px;
 }
 
 /* Responsive Design */
