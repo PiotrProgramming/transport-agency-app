@@ -1,28 +1,36 @@
-// Drivers Module - Standalone module for drivers management
-var DriversModule = (function() {
-    // Private variables
-    let driversList;
-    let statusFilter;
-    let addDriverBtn;
-    let importBtn;
-    let viewInitialized = false;
+// Initialize drivers view when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Only initialize if the drivers module functions are needed
+    window.initDrivers = function() {
+        console.log('Initializing drivers view');
+        
+        // Set up event listeners for the add driver button
+        const addDriverBtn = document.getElementById('add-driver-btn');
+        if (addDriverBtn && !addDriverBtn.dataset.initialized) {
+            addDriverBtn.addEventListener('click', showAddDriverForm);
+            addDriverBtn.dataset.initialized = 'true';
+        }
+        
+        // Set up status filter
+        const statusFilter = document.getElementById('drivers-status-filter');
+        if (statusFilter && !statusFilter.dataset.initialized) {
+            statusFilter.addEventListener('change', filterDrivers);
+            statusFilter.dataset.initialized = 'true';
+        }
+        
+        // Load drivers data
+        loadDriversData();
+    };
     
-    // Initialize the drivers module
-    function init() {
-        console.log('Initializing Drivers Module');
-        
-        // Get DOM elements
-        driversList = document.getElementById('drivers-list');
-        statusFilter = document.getElementById('drivers-status-filter');
-        addDriverBtn = document.getElementById('add-driver-btn');
-        importBtn = document.getElementById('drivers-import-btn');
-        
+    // Load drivers data
+    async function loadDriversData() {
+        const driversList = document.getElementById('drivers-list');
         if (!driversList) {
             console.error('Drivers list container not found');
             return;
         }
         
-        // Clear placeholder
+        // Clear existing content
         driversList.innerHTML = `
             <div class="view-placeholder">
                 <div class="loading-indicator">
@@ -34,104 +42,38 @@ var DriversModule = (function() {
             </div>
         `;
         
-        // Set up event listeners
-        if (addDriverBtn) {
-            addDriverBtn.addEventListener('click', showAddDriverForm);
-        }
-        
-        if (statusFilter) {
-            statusFilter.addEventListener('change', filterDrivers);
-        }
-        
-        if (importBtn) {
-            importBtn.addEventListener('click', handleImport);
-        }
-        
-        // Load data
-        loadDriversData();
-        
-        viewInitialized = true;
-        appState.modules.drivers = this;
-    }
-    
-    // Load drivers data from GitHub
-    async function loadDriversData() {
-        console.log('Loading drivers data');
-        
-        if (!driversList) {
-            console.error('Drivers list container not found');
-            return;
-        }
-        
         try {
-            // Show loading state
-            driversList.innerHTML = `
-                <div class="view-placeholder">
-                    <div class="loading-indicator">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
-                    <p>Loading drivers data...</p>
-                </div>
-            `;
-            
-            // Fetch data from GitHub
+            // REAL DATABASE CALL - Fetch drivers from GitHub
             const drivers = await githubService.getFileContent('drivers.json');
             
-            // Render data
-            renderDrivers(drivers);
+            // Clear loading indicator
+            driversList.innerHTML = '';
             
-            console.log(`Successfully loaded ${drivers.length} drivers from GitHub`);
+            // Render drivers
+            drivers.forEach(driver => {
+                renderDriver(driver, driversList);
+            });
+            
+            console.log(`Successfully loaded ${drivers.length} drivers from database`);
         } catch (error) {
             console.error('Error loading drivers:', error);
-            showErrorMessage(error);
-        }
-    }
-    
-    // Render drivers
-    function renderDrivers(drivers) {
-        if (!driversList) return;
-        
-        if (drivers.length === 0) {
             driversList.innerHTML = `
-                <div class="view-placeholder">
-                    <i class="fas fa-user-friends" style="font-size: 48px; color: var(--medium-gray); margin-bottom: 15px;"></i>
-                    <h3>No Drivers Found</h3>
-                    <p>Get started by adding your first driver</p>
-                    <button class="btn btn-primary" id="first-driver-btn" style="margin-top: 15px;">
-                        <i class="fas fa-plus"></i> Add First Driver
-                    </button>
+                <div class="error-message">
+                    <h3>Error Loading Drivers</h3>
+                    <p>${error.message}</p>
+                    <button class="btn btn-primary" onclick="loadDriversData()">Retry</button>
                 </div>
             `;
-            
-            // Add event listener for the first driver button
-            const firstDriverBtn = document.getElementById('first-driver-btn');
-            if (firstDriverBtn) {
-                firstDriverBtn.addEventListener('click', showAddDriverForm);
-            }
-            
-            return;
         }
-        
-        // Clear container
-        driversList.innerHTML = '';
-        
-        // Render each driver
-        drivers.forEach(driver => {
-            renderDriver(driver);
-        });
     }
-    
+
     // Render a single driver
-    function renderDriver(driver) {
-        if (!driversList) return;
-        
+    function renderDriver(driver, driversList) {
         const driverSlip = document.createElement('div');
         driverSlip.className = 'driver-slip';
         driverSlip.dataset.id = driver.id;
         
-        // Determine status class
+        // Determine status class and text
         let statusClass, statusText;
         switch(driver.status) {
             case 'available':
@@ -170,28 +112,27 @@ var DriversModule = (function() {
                     <span class="detail-label">Assigned Card:</span> ${driver.card ? driver.card : 'Unassigned'}
                 </div>
                 <div>
-                    <span class="detail-label">Tenders:</span> ${driver.tenders || '0 (0 active)'}
+                    <span class="detail-label">Tenders:</span> ${driver.tenders ? driver.tenders : '0 (0 active)'}
                 </div>
                 <div>
-                    <span class="detail-label">Last Delivery:</span> ${driver.lastDelivery || 'Never'}
+                    <span class="detail-label">Last Delivery:</span> ${driver.lastDelivery ? driver.lastDelivery : 'Never'}
                 </div>
             </div>
         `;
         
-        // Add click handler
+        // Add click handler for detailed view
         driverSlip.addEventListener('click', () => {
             showDriverDetails(driver);
         });
         
         driversList.appendChild(driverSlip);
     }
-    
+
     // Show driver details
     function showDriverDetails(driver) {
-        // In a real implementation, this would show a detailed view
-        alert(`Driver Details:\n\nName: ${driver.firstName} ${driver.lastName}\nLicense: ${driver.license}\nStatus: ${driver.status}\nExperience: ${driver.experience}\n\nIn a real implementation, this would show a detailed view with all driver information.`);
+        alert(`Detailed view for ${driver.firstName} ${driver.lastName}\nIn a real implementation, this would show all driver details and current tenders.`);
     }
-    
+
     // Show add driver form
     async function showAddDriverForm() {
         const name = prompt('Enter driver first name:');
@@ -207,13 +148,11 @@ var DriversModule = (function() {
         if (!experience) return;
         
         try {
-            // Fetch existing drivers
+            // REAL DATABASE CALL - Fetch existing drivers to generate new ID
             const drivers = await githubService.getFileContent('drivers.json');
-            
-            // Generate new ID
             const newId = drivers.length > 0 ? Math.max(...drivers.map(d => d.id)) + 1 : 1;
             
-            // Create new driver
+            // Create new driver object
             const newDriver = {
                 id: newId,
                 firstName: name,
@@ -227,71 +166,37 @@ var DriversModule = (function() {
                 status: 'available'
             };
             
-            // Add to drivers array
+            // Add to existing drivers array
             drivers.push(newDriver);
             
-            // Save to GitHub
+            // REAL DATABASE CALL - Save updated drivers to GitHub
             await githubService.updateFileContent('drivers.json', drivers, 'Add new driver');
             
-            // Show success message
-            alert(`Driver ${name} ${lastName} added successfully!`);
+            // Add to UI
+            const driversList = document.getElementById('drivers-list');
+            if (driversList) {
+                renderDriver(newDriver, driversList);
+            }
             
-            // Refresh data
-            loadDriversData();
+            alert(`Driver ${name} ${lastName} added successfully!`);
         } catch (error) {
             console.error('Error adding driver:', error);
             alert(`Failed to add driver: ${error.message}`);
         }
     }
-    
+
     // Filter drivers by status
     function filterDrivers() {
-        if (!statusFilter || !driversList) return;
+        const statusFilter = document.getElementById('drivers-status-filter');
+        const filterValue = statusFilter ? statusFilter.value : 'all';
         
-        const filterValue = statusFilter.value;
         const driverSlips = document.querySelectorAll('.driver-slip');
-        
         driverSlips.forEach(slip => {
-            const statusText = slip.querySelector('.driver-status').textContent.toLowerCase();
-            
-            if (filterValue === 'all' || statusText.includes(filterValue)) {
+            if (filterValue === 'all' || slip.querySelector('.driver-status').textContent.toLowerCase().includes(filterValue)) {
                 slip.style.display = 'block';
             } else {
                 slip.style.display = 'none';
             }
         });
     }
-    
-    // Handle import
-    function handleImport() {
-        alert('Import functionality would open a file picker to import drivers from a CSV or Excel file.\n\nIn a real implementation, this data would be saved to your GitHub repository.');
-    }
-    
-    // Show error message
-    function showErrorMessage(error) {
-        if (!driversList) return;
-        
-        driversList.innerHTML = `
-            <div class="error-message">
-                <h3>Error Loading Drivers</h3>
-                <p>${error.message}</p>
-                <div style="margin-top: 15px;">
-                    <button class="btn btn-primary" id="retry-drivers-btn">Retry</button>
-                </div>
-            </div>
-        `;
-        
-        // Add retry button handler
-        const retryBtn = document.getElementById('retry-drivers-btn');
-        if (retryBtn) {
-            retryBtn.addEventListener('click', loadDriversData);
-        }
-    }
-    
-    // Public API
-    return {
-        init: init,
-        load: loadDriversData,
-        filter: filterDrivers
-    };
-})();
+});
