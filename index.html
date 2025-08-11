@@ -7,6 +7,7 @@
     <!-- Core CSS -->
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/data-views.css">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -161,6 +162,10 @@
         const registerForm = document.getElementById('register-form');
         const loginBtn = document.getElementById('login-btn');
         const registerBtn = document.getElementById('register-btn');
+        
+        // App View Elements
+        let authView, appView, contentArea, navItems, notificationBell, notificationDropdown, 
+            userProfile, userDropdown, logoutBtn;
 
         // Initialize authentication
         function initAuth() {
@@ -184,12 +189,6 @@
             // Registration functionality
             if (registerBtn) {
                 registerBtn.addEventListener('click', handleRegistration);
-            }
-            
-            // Logout button
-            const logoutBtn = document.getElementById('logout-btn');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', handleLogout);
             }
         }
 
@@ -215,31 +214,26 @@
             appState.token = token;
             appState.repo = repo;
             
+            // Initialize app view elements
+            authView = document.getElementById('auth-view');
+            appView = document.getElementById('app-view');
+            contentArea = document.getElementById('content-area');
+            navItems = document.querySelectorAll('.nav-item');
+            notificationBell = document.getElementById('notification-bell');
+            notificationDropdown = document.getElementById('notification-dropdown');
+            userProfile = document.getElementById('user-profile');
+            userDropdown = document.getElementById('user-dropdown');
+            logoutBtn = document.getElementById('logout-btn');
+            
             // Switch to app view
-            document.getElementById('auth-view').classList.remove('active');
-            document.getElementById('app-view').classList.add('active');
+            authView.classList.remove('active');
+            appView.classList.add('active');
             
-            // For now, just show a success message
-            document.getElementById('content-area').innerHTML = `
-                <div class="view-placeholder">
-                    <h2>Login Successful!</h2>
-                    <p>You are now logged in as ${appState.currentUser.name}</p>
-                    <p>Repository: ${appState.repo}</p>
-                    <button class="btn btn-primary" id="dashboard-btn">Go to Dashboard</button>
-                </div>
-            `;
+            // Update user name in header
+            document.getElementById('user-name').textContent = appState.currentUser.name;
             
-            // Set up dashboard button
-            document.getElementById('dashboard-btn').addEventListener('click', () => {
-                document.getElementById('content-area').innerHTML = `
-                    <div class="view-placeholder">
-                        <h2>Dashboard</h2>
-                        <p>This is where the dashboard content would appear.</p>
-                        <p>GitHub Token: ${appState.token.substring(0, 10)}...</p>
-                        <p>Repository: ${appState.repo}</p>
-                    </div>
-                `;
-            });
+            // Load the dashboard view
+            loadView('dashboard');
         }
 
         // Handle registration
@@ -264,30 +258,123 @@
             appState.token = token;
             appState.repo = `${appState.githubUsername || 'your-username'}/${repoName}`;
             
+            // Initialize app view elements
+            authView = document.getElementById('auth-view');
+            appView = document.getElementById('app-view');
+            contentArea = document.getElementById('content-area');
+            navItems = document.querySelectorAll('.nav-item');
+            notificationBell = document.getElementById('notification-bell');
+            notificationDropdown = document.getElementById('notification-dropdown');
+            userProfile = document.getElementById('user-profile');
+            userDropdown = document.getElementById('user-dropdown');
+            logoutBtn = document.getElementById('logout-btn');
+            
             // Switch to app view
-            document.getElementById('auth-view').classList.remove('active');
-            document.getElementById('app-view').classList.add('active');
+            authView.classList.remove('active');
+            appView.classList.add('active');
             
-            // Show success message
-            document.getElementById('content-area').innerHTML = `
-                <div class="view-placeholder">
-                    <h2>Registration Successful!</h2>
-                    <p>You are now logged in as ${appState.currentUser.name}</p>
-                    <p>Repository: ${appState.repo}</p>
-                    <button class="btn btn-primary" id="dashboard-btn">Go to Dashboard</button>
-                </div>
-            `;
+            // Update user name in header
+            document.getElementById('user-name').textContent = appState.currentUser.name;
             
-            // Set up dashboard button
-            document.getElementById('dashboard-btn').addEventListener('click', () => {
-                document.getElementById('content-area').innerHTML = `
-                    <div class="view-placeholder">
-                        <h2>Dashboard</h2>
-                        <p>This is where the dashboard content would appear.</p>
-                        <p>GitHub Token: ${appState.token.substring(0, 10)}...</p>
-                        <p>Repository: ${appState.repo}</p>
-                    </div>
-                `;
+            // Load the dashboard view
+            loadView('dashboard');
+        }
+
+        // Load a view fragment
+        function loadView(view) {
+            console.log(`Loading view: ${view}`);
+            
+            // Update navigation highlights
+            if (navItems) {
+                navItems.forEach(i => i.classList.remove('active'));
+                const activeNavItem = document.querySelector(`.nav-item[data-view="${view}"]`);
+                if (activeNavItem) activeNavItem.classList.add('active');
+            }
+            
+            // Load the HTML fragment
+            fetch(`views/${view}.html`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Failed to load ${view} view (HTTP ${response.status})`);
+                    }
+                    return response.text();
+                })
+                .then(html => {
+                    // Insert the HTML into the content area
+                    if (contentArea) {
+                        contentArea.innerHTML = html;
+                        
+                        // Store the current view
+                        appState.currentView = view;
+                        
+                        // Initialize view-specific JavaScript
+                        if (view === 'dashboard') {
+                            initDashboard();
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error(error);
+                    if (contentArea) {
+                        contentArea.innerHTML = `
+                            <div class="error-message">
+                                <h3>Error Loading View</h3>
+                                <p>${error.message}</p>
+                                <button class="btn btn-primary" onclick="loadView('${appState.currentView}')">Retry</button>
+                            </div>
+                        `;
+                    }
+                });
+        }
+
+        // Initialize dashboard view
+        function initDashboard() {
+            console.log('Initializing dashboard view');
+            
+            // Update the user name in the header
+            if (appState.currentUser) {
+                document.getElementById('user-name').textContent = appState.currentUser.name;
+            }
+            
+            // Set up navigation
+            if (navItems) {
+                navItems.forEach(item => {
+                    item.addEventListener('click', () => {
+                        const view = item.getAttribute('data-view');
+                        loadView(view);
+                    });
+                });
+            }
+            
+            // Notification dropdown
+            if (notificationBell && notificationDropdown) {
+                notificationBell.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    notificationDropdown.style.display = notificationDropdown.style.display === 'block' ? 'none' : 'block';
+                });
+            }
+            
+            // User dropdown
+            if (userProfile && userDropdown) {
+                userProfile.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
+                });
+            }
+            
+            // Logout button
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', handleLogout);
+            }
+            
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', (e) => {
+                if (notificationBell && !notificationBell.contains(e.target)) {
+                    notificationDropdown.style.display = 'none';
+                }
+                if (userProfile && !userProfile.contains(e.target)) {
+                    userDropdown.style.display = 'none';
+                }
             });
         }
 
@@ -300,8 +387,17 @@
             appState.githubUsername = null;
             
             // Switch to auth view
-            document.getElementById('auth-view').classList.add('active');
-            document.getElementById('app-view').classList.remove('active');
+            authView.classList.add('active');
+            appView.classList.remove('active');
+            
+            // Clear content area
+            if (contentArea) contentArea.innerHTML = '';
+            
+            // Reset auth forms
+            loginForm.style.display = 'block';
+            registerForm.style.display = 'none';
+            authTabs.forEach(t => t.classList.remove('active'));
+            authTabs[0].classList.add('active');
         }
 
         // Initialize auth when DOM is loaded
