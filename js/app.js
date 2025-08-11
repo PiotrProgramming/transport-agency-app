@@ -20,9 +20,15 @@ const githubService = {
         const repo = repoParts.slice(1).join('/');
         
         try {
-            const response = await this._makeApiRequest(
-                `${this.baseUrl}/repos/${owner}/${repo}/contents/${path}`
+            const response = await fetch(
+                `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+                { headers: this.getHeaders() }
             );
+            
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                throw new Error(error.message || `Failed to fetch ${path}`);
+            }
             
             const data = await response.json();
             return JSON.parse(atob(data.content));
@@ -50,29 +56,25 @@ const githubService = {
         try {
             // First get the current file info to get the SHA
             let sha = null;
-            try {
-                const fileInfoResponse = await this._makeApiRequest(
-                    `${this.baseUrl}/repos/${owner}/${repo}/contents/${path}`
-                );
-                
-                if (fileInfoResponse.ok) {
-                    const fileInfo = await fileInfoResponse.json();
-                    sha = fileInfo.sha;
-                }
-            } catch (error) {
-                // File might not exist yet, which is fine
-                if (error.message.includes('404')) {
-                    console.log(`File ${path} not found, will create new`);
-                } else {
-                    throw error;
-                }
+            const fileInfoResponse = await fetch(
+                `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+                { headers: this.getHeaders() }
+            );
+            
+            if (fileInfoResponse.ok) {
+                const fileInfo = await fileInfoResponse.json();
+                sha = fileInfo.sha;
             }
             
             // Update the file
-            const response = await this._makeApiRequest(
-                `${this.baseUrl}/repos/${owner}/${repo}/contents/${path}`,
+            const response = await fetch(
+                `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
                 {
                     method: 'PUT',
+                    headers: {
+                        ...this.getHeaders(),
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify({
                         message: message,
                         content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2)))),
@@ -80,6 +82,11 @@ const githubService = {
                     })
                 }
             );
+            
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                throw new Error(error.message || `Failed to update ${path}`);
+            }
             
             return response.json();
         } catch (error) {
@@ -95,66 +102,6 @@ const githubService = {
             'Accept': 'application/vnd.github.v3+json',
             'Content-Type': 'application/json'
         };
-    },
-    
-    // Base URL for GitHub API
-    get baseUrl() {
-        return 'https://api.github.com';
-    },
-    
-    // Make API request with retry logic
-    async _makeApiRequest(url, options = {}) {
-        const config = {
-            maxRetries: 3,
-            initialDelay: 1000,
-            backoffFactor: 2
-        };
-        
-        let lastError;
-        
-        for (let i = 0; i <= config.maxRetries; i++) {
-            try {
-                const response = await fetch(url, {
-                    ...options,
-                    headers: {
-                        ...this.getHeaders(),
-                        ...(options.headers || {})
-                    }
-                });
-                
-                // Handle rate limiting
-                if (response.status === 403) {
-                    const rateLimitReset = response.headers.get('X-RateLimit-Reset');
-                    if (rateLimitReset) {
-                        const resetTime = new Date(parseInt(rateLimitReset) * 1000);
-                        const waitTime = Math.max(0, resetTime - Date.now() + 1000);
-                        
-                        console.log(`GitHub API rate limited. Waiting ${waitTime}ms before retry...`);
-                        await new Promise(resolve => setTimeout(resolve, waitTime));
-                        continue;
-                    }
-                }
-                
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(`GitHub API error: ${response.status} ${response.statusText} - ${errorData.message || ''}`);
-                }
-                
-                return response;
-            } catch (error) {
-                lastError = error;
-                
-                if (i < config.maxRetries) {
-                    const delay = config.initialDelay * Math.pow(config.backoffFactor, i);
-                    console.log(`Retry ${i+1}/${config.maxRetries} after ${delay}ms:`, error);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                } else {
-                    throw lastError;
-                }
-            }
-        }
-        
-        throw lastError;
     }
 };
 
@@ -245,7 +192,7 @@ function loadView(view) {
                 
                 // Initialize view-specific module AFTER the HTML is rendered
                 setTimeout(() => {
-                    initViewModule(view);
+                    initView(view);
                 }, 100);
             }
         })
@@ -263,138 +210,59 @@ function loadView(view) {
         });
 }
 
-// Initialize view-specific module
-function initViewModule(view) {
-    console.log(`Initializing module for view: ${view}`);
+// Initialize view-specific JavaScript
+function initView(view) {
+    console.log(`Initializing view: ${view}`);
     
-    // This is where we initialize our view-specific modules
+    // This is where you would initialize view-specific JavaScript
+    // For now, we'll just handle a few special cases
+    
     switch(view) {
         case 'dashboard':
-            if (typeof DashboardModule !== 'undefined' && DashboardModule) {
-                DashboardModule.init();
-            } else {
-                console.error('DashboardModule is not defined');
-                loadView('dashboard');
+            if (typeof initDashboard === 'function') {
+                initDashboard();
             }
             break;
-            
         case 'drivers':
-            if (typeof DriversModule !== 'undefined' && DriversModule) {
-                DriversModule.init();
-            } else {
-                console.error('DriversModule is not defined');
-                // Give it one more chance to load
-                setTimeout(() => {
-                    if (typeof DriversModule !== 'undefined' && DriversModule) {
-                        DriversModule.init();
-                    } else {
-                        if (contentArea) {
-                            contentArea.innerHTML = `
-                                <div class="error-message">
-                                    <h3>Module Error</h3>
-                                    <p>Drivers module is not loaded. Please refresh the page.</p>
-                                    <button class="btn btn-primary" onclick="location.reload()">Refresh</button>
-                                </div>
-                            `;
-                        }
-                    }
-                }, 200);
+            if (typeof initDrivers === 'function') {
+                initDrivers();
             }
             break;
-            
         case 'cars':
-            if (typeof CarsModule !== 'undefined' && CarsModule) {
-                CarsModule.init();
-            } else {
-                console.error('CarsModule is not defined');
-                setTimeout(() => {
-                    if (typeof CarsModule !== 'undefined' && CarsModule) {
-                        CarsModule.init();
-                    }
-                }, 200);
+            if (typeof initCars === 'function') {
+                initCars();
             }
             break;
-            
         case 'cards':
-            if (typeof CardsModule !== 'undefined' && CardsModule) {
-                CardsModule.init();
-            } else {
-                console.error('CardsModule is not defined');
-                setTimeout(() => {
-                    if (typeof CardsModule !== 'undefined' && CardsModule) {
-                        CardsModule.init();
-                    }
-                }, 200);
+            if (typeof initCards === 'function') {
+                initCards();
             }
             break;
-            
         case 'tenders':
-            if (typeof TendersModule !== 'undefined' && TendersModule) {
-                TendersModule.init();
-            } else {
-                console.error('TendersModule is not defined');
-                setTimeout(() => {
-                    if (typeof TendersModule !== 'undefined' && TendersModule) {
-                        TendersModule.init();
-                    }
-                }, 200);
+            if (typeof initTenders === 'function') {
+                initTenders();
             }
             break;
-            
         case 'invoices':
-            if (typeof InvoicesModule !== 'undefined' && InvoicesModule) {
-                InvoicesModule.init();
-            } else {
-                console.error('InvoicesModule is not defined');
-                setTimeout(() => {
-                    if (typeof InvoicesModule !== 'undefined' && InvoicesModule) {
-                        InvoicesModule.init();
-                    }
-                }, 200);
+            if (typeof initInvoices === 'function') {
+                initInvoices();
             }
             break;
-            
         case 'reports':
-            if (typeof ReportsModule !== 'undefined' && ReportsModule) {
-                ReportsModule.init();
-            } else {
-                console.error('ReportsModule is not defined');
-                setTimeout(() => {
-                    if (typeof ReportsModule !== 'undefined' && ReportsModule) {
-                        ReportsModule.init();
-                    }
-                }, 200);
+            if (typeof initReports === 'function') {
+                initReports();
             }
             break;
-            
         case 'admin':
-            if (typeof AdminModule !== 'undefined' && AdminModule) {
-                AdminModule.init();
-            } else {
-                console.error('AdminModule is not defined');
-                setTimeout(() => {
-                    if (typeof AdminModule !== 'undefined' && AdminModule) {
-                        AdminModule.init();
-                    }
-                }, 200);
+            if (typeof initAdmin === 'function') {
+                initAdmin();
             }
             break;
-            
         case 'chat':
-            if (typeof ChatModule !== 'undefined' && ChatModule) {
-                ChatModule.init();
-            } else {
-                console.error('ChatModule is not defined');
-                setTimeout(() => {
-                    if (typeof ChatModule !== 'undefined' && ChatModule) {
-                        ChatModule.init();
-                    }
-                }, 200);
+            if (typeof initChat === 'function') {
+                initChat();
             }
             break;
-            
-        default:
-            console.log(`No specific module for view: ${view}`);
     }
 }
 
@@ -433,8 +301,8 @@ function loadInitialData() {
     }
     
     // Load notifications
-    if (typeof NotificationsModule !== 'undefined' && NotificationsModule) {
-        NotificationsModule.loadNotifications();
+    if (typeof loadNotifications === 'function') {
+        loadNotifications();
     }
     
     // Activate the current view (which will load its data)
@@ -449,20 +317,12 @@ function handleLogout() {
     appState.repo = null;
     appState.githubUsername = null;
     
-    // Clear GitHub API headers
-    appState.githubApi.headers.Authorization = '';
-    
     // CRITICAL FIX: Properly switch views
     if (authView) authView.classList.add('active');
     if (appView) appView.classList.remove('active');
     
     // Clear content area
     if (contentArea) contentArea.innerHTML = '';
-    
-    // Reset modules
-    for (const module in appState.modules) {
-        appState.modules[module] = null;
-    }
 }
 
 // Initialize the app when DOM is loaded
