@@ -1,292 +1,315 @@
-// Initialize cards management
-function initCards() {
-    console.log('Initializing cards view');
-    
-    // Register this view's initializer with the app state
-    appState.registerViewInitializer('cards', function() {
-        console.log('Cards view initialized');
-    });
-    
-    // Register this view's data loader with the app state
-    appState.registerViewLoader('cards', function() {
-        console.log('Cards view data loader called');
-        loadCardsData();
-    });
-    
-    // Set up event listeners for the add card button
-    const addCardBtn = document.getElementById('add-card-btn');
-    if (addCardBtn && !addCardBtn.dataset.initialized) {
-        addCardBtn.addEventListener('click', showAddCardForm);
-        addCardBtn.dataset.initialized = 'true';
-    }
-    
-    // Initialize drag and drop
-    initDragAndDrop();
-}
-
-// Load cards data
-function loadCardsData() {
-    console.log('Loading cards data');
-    
-    const cardsList = document.getElementById('cards-list');
-    if (!cardsList) {
-        console.error('Cards list element not found');
-        return;
-    }
-    
-    // Clear existing content
-    cardsList.innerHTML = '';
-    
-    // In a real implementation, we would fetch this from GitHub
-    const sampleCards = [
-        {
-            id: 1,
-            number: '**** 1234',
-            pin: '••••',
-            expiry: '08/25',
-            assignedTo: 'Anna Schmidt',
-            vehicle: 'TR-307-XY',
-            status: 'active'
-        },
-        {
-            id: 2,
-            number: '**** 5678',
-            pin: '••••',
-            expiry: '11/24',
-            assignedTo: 'Michael Johnson',
-            vehicle: 'TR-204-BC',
-            status: 'active'
-        },
-        {
-            id: 3,
-            number: '**** 9012',
-            pin: '••••',
-            expiry: '05/24',
-            assignedTo: 'David Müller',
-            vehicle: 'TR-102-AB',
-            status: 'expired'
-        }
-    ];
-    
-    // Render cards
-    sampleCards.forEach(card => {
-        renderCard(card);
-    });
-    
-    // Initialize drag and drop areas
-    initAssignmentAreas();
-    
-    console.log(`Successfully loaded ${sampleCards.length} cards`);
-}
-
-// Render a single card
-function renderCard(card) {
-    const row = document.createElement('tr');
-    row.dataset.id = card.id;
-    
-    // Determine status class and text
-    let statusClass, statusText;
-    switch(card.status) {
-        case 'active':
-            statusClass = 'status-available';
-            statusText = 'Active';
-            break;
-        case 'expired':
-            statusClass = 'status-cancelled';
-            statusText = 'Expired';
-            break;
-        default:
-            statusClass = 'status-available';
-            statusText = 'Active';
-    }
-    
-    row.innerHTML = `
-        <td>${card.number}</td>
-        <td>${card.pin}</td>
-        <td>${card.expiry}</td>
-        <td>${card.assignedTo}</td>
-        <td>${card.vehicle}</td>
-        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-        <td>
-            <button class="btn btn-outline edit-card" data-id="${card.id}" style="padding:5px 10px; font-size:14px;">Edit</button>
-        </td>
-    `;
-    
-    cardsList.appendChild(row);
-    
-    // Add edit button handler
-    const editBtn = row.querySelector('.edit-card');
-    if (editBtn) {
-        editBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            editCard(card);
-        });
-    }
-}
-
-// Show add card form
-function showAddCardForm() {
-    const number = prompt('Enter card number (last 4 digits):');
-    if (!number) return;
-    
-    const pin = prompt('Enter card PIN:');
-    if (!pin) return;
-    
-    const expiry = prompt('Enter card expiry date (MM/YY):');
-    if (!expiry) return;
-    
-    // In a real implementation, we would save this to GitHub
-    const newCard = {
-        id: Date.now(),
-        number: '**** ' + number,
-        pin: '••••',
-        expiry: expiry,
-        assignedTo: 'Unassigned',
-        vehicle: 'Unassigned',
-        status: 'active'
-    };
-    
-    // Add to UI
-    renderCard(newCard);
-    
-    alert(`Card **** ${number} added successfully!\nIn a real implementation, this data would be saved to your GitHub repository.`);
-}
-
-// Edit card
-function editCard(card) {
-    const newExpiry = prompt('Enter new expiry date (MM/YY):', card.expiry);
-    if (!newExpiry) return;
-    
-    // Update UI
-    const row = document.querySelector(`#cards-list tr[data-id="${card.id}"]`);
-    if (row) {
-        const cells = row.querySelectorAll('td');
-        cells[2].textContent = newExpiry;
-    }
-    
-    alert(`Card updated!\nIn a real implementation, this change would be saved to your GitHub repository.`);
-}
-
-// Initialize drag and drop areas
-function initAssignmentAreas() {
-    const assignmentContainer = document.getElementById('assignment-container');
-    if (!assignmentContainer) return;
-    
-    // Clear existing content
-    assignmentContainer.innerHTML = '';
-    
-    // In a real implementation, we would fetch drivers and cards from GitHub
-    const sampleDrivers = [
-        { id: 1, name: 'Michael Johnson', status: 'available' },
-        { id: 2, name: 'Anna Schmidt', status: 'on-duty' },
-        { id: 3, name: 'David Müller', status: 'maintenance' }
-    ];
-    
-    const sampleCards = [
-        { id: 1, number: '**** 1234', status: 'active' },
-        { id: 2, number: '**** 5678', status: 'active' },
-        { id: 3, number: '**** 9012', status: 'expired' }
-    ];
-    
-    // Create drivers area
-    const driversArea = document.createElement('div');
-    driversArea.style.flex = '1';
-    driversArea.style.background = 'var(--light-gray)';
-    driversArea.style.padding = '20px';
-    driversArea.style.borderRadius = 'var(--border-radius)';
-    driversArea.innerHTML = '<h3 style="margin-bottom: 15px;">Available Drivers</h3>';
-    
-    // Add drivers
-    sampleDrivers.forEach(driver => {
-        const driverElement = document.createElement('div');
-        driverElement.className = 'driver-slip';
-        driverElement.draggable = true;
-        driverElement.dataset.type = 'driver';
-        driverElement.dataset.id = driver.id;
-        driverElement.innerHTML = `
-            <div class="driver-name">${driver.name}</div>
-            <div class="driver-status" style="margin-top: 5px; font-size: 12px;">
-                Status: ${driver.status === 'available' ? 'Available' : driver.status === 'on-duty' ? 'On Duty' : 'Maintenance'}
-            </div>
-        `;
-        driversArea.appendChild(driverElement);
-    });
-    
-    // Create cards area
-    const cardsArea = document.createElement('div');
-    cardsArea.style.flex = '1';
-    cardsArea.style.background = 'var(--light-gray)';
-    cardsArea.style.padding = '20px';
-    cardsArea.style.borderRadius = 'var(--border-radius)';
-    cardsArea.innerHTML = '<h3 style="margin-bottom: 15px;">Available Cards</h3>';
-    
-    // Add cards
-    sampleCards.forEach(card => {
-        const cardElement = document.createElement('div');
-        cardElement.className = 'driver-slip';
-        cardElement.draggable = true;
-        cardElement.dataset.type = 'card';
-        cardElement.dataset.id = card.id;
-        cardElement.innerHTML = `
-            <div class="driver-name">Card: ${card.number}</div>
-            <div class="driver-status" style="margin-top: 5px; font-size: 12px;">
-                Status: ${card.status === 'active' ? 'Active' : 'Expired'}
-            </div>
-        `;
-        cardsArea.appendChild(cardElement);
-    });
-    
-    // Add areas to container
-    assignmentContainer.appendChild(driversArea);
-    assignmentContainer.appendChild(cardsArea);
-}
-
-// Initialize drag and drop
-function initDragAndDrop() {
-    document.addEventListener('dragstart', (e) => {
-        if (e.target.draggable) {
-            e.dataTransfer.setData('text/plain', e.target.dataset.id);
-            e.target.classList.add('dragging');
-        }
-    });
-    
-    document.addEventListener('dragend', (e) => {
-        if (e.target.draggable) {
-            e.target.classList.remove('dragging');
-        }
-    });
-    
-    document.addEventListener('dragover', (e) => {
-        e.preventDefault();
-    });
-    
-    document.addEventListener('drop', (e) => {
-        e.preventDefault();
-        const id = e.dataTransfer.getData('text/plain');
-        const draggable = document.querySelector(`[data-id="${id}"]`);
+// Cards Module - Standalone module for cards management
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize cards view
+    window.initCards = function() {
+        console.log('Initializing cards view');
         
-        if (draggable && e.target.closest('.driver-slip')) {
-            const target = e.target.closest('.driver-slip');
-            const targetType = target.dataset.type;
-            const draggedType = draggable.dataset.type;
+        // Get DOM elements
+        const addCardBtn = document.getElementById('add-card-btn');
+        const cardsStatusFilter = document.getElementById('cards-status-filter');
+        const cardsImportBtn = document.getElementById('cards-import-btn');
+        const cardFormModal = document.getElementById('card-form-modal');
+        const cardFormTitle = document.getElementById('card-form-title');
+        const cardForm = document.getElementById('card-form');
+        const saveCardBtn = document.querySelector('.save-card-btn');
+        const cancelCardBtn = document.querySelector('.cancel-card-btn');
+        const closeModalBtns = document.querySelectorAll('.close-modal');
+        
+        // Current card being edited or viewed
+        let currentCard = null;
+        
+        // Initialize event listeners
+        initEventListeners();
+        
+        // Load cards data
+        loadCardsData();
+        
+        function initEventListeners() {
+            // Add card button
+            if (addCardBtn) {
+                addCardBtn.addEventListener('click', () => {
+                    currentCard = null;
+                    cardFormTitle.textContent = 'Add New Card';
+                    resetCardForm();
+                    cardFormModal.style.display = 'block';
+                });
+            }
             
-            // Only allow certain combinations
-            if ((draggedType === 'driver' && targetType === 'card') || 
-                (draggedType === 'card' && targetType === 'driver')) {
-                
-                // In a real implementation, we would update the assignment in GitHub
-                alert(`Assignment created!\nIn a real implementation, this assignment would be saved to your GitHub repository.`);
-                
-                // Visual feedback
-                if (draggedType === 'driver') {
-                    target.innerHTML += `<div style="margin-top: 5px; color: var(--accent);">Assigned: ${draggable.querySelector('.driver-name').textContent}</div>`;
-                } else {
-                    target.innerHTML += `<div style="margin-top: 5px; color: var(--accent);">Assigned Card: ${draggable.querySelector('.driver-name').textContent}</div>`;
+            // Status filter
+            if (cardsStatusFilter) {
+                cardsStatusFilter.addEventListener('change', filterCards);
+            }
+            
+            // Import button
+            if (cardsImportBtn) {
+                cardsImportBtn.addEventListener('click', handleImport);
+            }
+            
+            // Save card button
+            if (saveCardBtn) {
+                saveCardBtn.addEventListener('click', saveCard);
+            }
+            
+            // Cancel card button
+            if (cancelCardBtn) {
+                cancelCardBtn.addEventListener('click', () => {
+                    cardFormModal.style.display = 'none';
+                });
+            }
+            
+            // Close modal buttons
+            closeModalBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    cardFormModal.style.display = 'none';
+                });
+            });
+            
+            // Close modal when clicking outside
+            window.addEventListener('click', (e) => {
+                if (e.target === cardFormModal) {
+                    cardFormModal.style.display = 'none';
                 }
+            });
+        }
+        
+        // Load cards data from GitHub
+        async function loadCardsData() {
+            const cardsList = document.getElementById('cards-list');
+            if (!cardsList) return;
+            
+            try {
+                // Show loading state
+                cardsList.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center">
+                            <div class="loading-indicator">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                
+                // Fetch data from GitHub
+                const cards = await githubService.getFileContent('cards.json');
+                
+                // Render data
+                renderCards(cards);
+                
+                console.log(`Successfully loaded ${cards.length} cards from GitHub`);
+            } catch (error) {
+                console.error('Error loading cards:', error);
+                showErrorMessage(error);
             }
         }
-    });
-}
-
-// Initialize cards when DOM is loaded
-document.addEventListener('DOMContentLoaded', initCards);
+        
+        // Render cards
+        function renderCards(cards) {
+            const cardsList = document.getElementById('cards-list');
+            if (!cardsList) return;
+            
+            // Clear container
+            cardsList.innerHTML = '';
+            
+            if (cards.length === 0) {
+                cardsList.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center" style="padding: 30px;">
+                            <i class="fas fa-credit-card" style="font-size: 48px; color: var(--medium-gray); margin-bottom: 15px;"></i>
+                            <h3>No Cards Found</h3>
+                            <p>Get started by adding your first card</p>
+                            <button class="btn btn-primary" id="first-card-btn" style="margin-top: 15px;">
+                                <i class="fas fa-plus"></i> Add First Card
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                
+                // Add event listener for the first card button
+                const firstCardBtn = document.getElementById('first-card-btn');
+                if (firstCardBtn) {
+                    firstCardBtn.addEventListener('click', () => {
+                        currentCard = null;
+                        cardFormTitle.textContent = 'Add New Card';
+                        resetCardForm();
+                        cardFormModal.style.display = 'block';
+                    });
+                }
+                
+                return;
+            }
+            
+            // Render each card
+            cards.forEach(card => {
+                renderCard(card, cardsList);
+            });
+        }
+        
+        // Render a single card
+        function renderCard(card, container) {
+            const row = document.createElement('tr');
+            row.dataset.id = card.id;
+            
+            // Determine status class and text
+            let statusClass, statusText;
+            switch(card.status) {
+                case 'active':
+                    statusClass = 'status-available';
+                    statusText = 'Active';
+                    break;
+                case 'expired':
+                    statusClass = 'status-cancelled';
+                    statusText = 'Expired';
+                    break;
+                default:
+                    statusClass = 'status-available';
+                    statusText = 'Active';
+            }
+            
+            row.innerHTML = `
+                <td>${card.number}</td>
+                <td>${card.pin}</td>
+                <td>${card.expiry}</td>
+                <td>${card.assignedTo ? card.assignedTo : 'Unassigned'}</td>
+                <td>${card.vehicle ? card.vehicle : 'Unassigned'}</td>
+                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                <td>
+                    <button class="btn btn-outline edit-card" data-id="${card.id}" style="padding:5px 10px; font-size:14px;">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                </td>
+            `;
+            
+            container.appendChild(row);
+            
+            // Add edit button handler
+            const editBtn = row.querySelector('.edit-card');
+            if (editBtn) {
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    editCard(card);
+                });
+            }
+        }
+        
+        // Edit card
+        function editCard(card) {
+            currentCard = card;
+            cardFormTitle.textContent = 'Edit Card';
+            populateCardForm(card);
+            document.getElementById('card-form-modal').style.display = 'block';
+        }
+        
+        // Reset card form
+        function resetCardForm() {
+            document.getElementById('card-number').value = '';
+            document.getElementById('card-pin').value = '';
+            document.getElementById('card-expiry').value = '';
+            document.getElementById('card-status').value = 'active';
+        }
+        
+        // Populate card form
+        function populateCardForm(card) {
+            document.getElementById('card-number').value = card.number;
+            document.getElementById('card-pin').value = card.pin;
+            document.getElementById('card-expiry').value = card.expiry;
+            document.getElementById('card-status').value = card.status;
+        }
+        
+        // Save card
+        async function saveCard() {
+            // Validate form
+            const number = document.getElementById('card-number').value;
+            const pin = document.getElementById('card-pin').value;
+            const expiry = document.getElementById('card-expiry').value;
+            
+            if (!number || !pin || !expiry) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            try {
+                // Get existing cards
+                const cards = await githubService.getFileContent('cards.json');
+                
+                // Create or update card
+                const cardData = {
+                    number: number,
+                    pin: pin,
+                    expiry: expiry,
+                    status: document.getElementById('card-status').value,
+                    assignedTo: currentCard ? currentCard.assignedTo : null,
+                    vehicle: currentCard ? currentCard.vehicle : null
+                };
+                
+                if (currentCard) {
+                    // Update existing card
+                    cardData.id = currentCard.id;
+                    const index = cards.findIndex(c => c.id === currentCard.id);
+                    if (index !== -1) {
+                        cards[index] = cardData;
+                    }
+                } else {
+                    // Add new card
+                    cardData.id = cards.length > 0 ? Math.max(...cards.map(c => c.id)) + 1 : 1;
+                    cards.push(cardData);
+                }
+                
+                // Save to GitHub
+                await githubService.updateFileContent('cards.json', cards, currentCard ? 'Update card' : 'Add new card');
+                
+                // Close modal
+                document.getElementById('card-form-modal').style.display = 'none';
+                
+                // Refresh cards list
+                loadCardsData();
+                
+                // Show success message
+                alert(`Card **** ${number.slice(-4)} ${currentCard ? 'updated' : 'added'} successfully!`);
+            } catch (error) {
+                console.error('Error saving card:', error);
+                alert(`Failed to save card: ${error.message}`);
+            }
+        }
+        
+        // Filter cards by status
+        function filterCards() {
+            const statusFilter = document.getElementById('cards-status-filter');
+            const filterValue = statusFilter ? statusFilter.value : 'all';
+            
+            const cardRows = document.querySelectorAll('#cards-list tr');
+            cardRows.forEach(row => {
+                const statusText = row.querySelector('.status-badge')?.textContent.toLowerCase() || '';
+                if (filterValue === 'all' || statusText.includes(filterValue)) {
+                    row.style.display = 'table-row';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        // Handle import
+        function handleImport() {
+            alert('Import functionality would open a file picker to import cards from a CSV or Excel file.\n\nIn a real implementation, this data would be saved to your GitHub repository.');
+        }
+        
+        // Show error message
+        function showErrorMessage(error) {
+            const cardsList = document.getElementById('cards-list');
+            if (!cardsList) return;
+            
+            cardsList.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center">
+                        <div class="error-message" style="width: 100%; margin: 0;">
+                            <h3>Error Loading Cards</h3>
+                            <p>${error.message}</p>
+                            <button class="btn btn-primary" onclick="loadCardsData()">Retry</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+    };
+});
