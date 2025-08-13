@@ -21,30 +21,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const saveAssignmentBtn = document.querySelector('.save-assignment-btn');
         const cancelAssignmentBtn = document.querySelector('.cancel-assignment-btn');
         
-        // Car management elements
-        const addCarBtn = document.createElement('button');
-        addCarBtn.className = 'btn btn-primary';
-        addCarBtn.innerHTML = '<i class="fas fa-plus"></i> Add Car';
-        addCarBtn.style.marginTop = '15px';
-        
-        const carsStatusFilter = document.getElementById('cars-status-filter');
-        const carsImportBtn = document.createElement('button');
-        carsImportBtn.className = 'btn btn-outline';
-        carsImportBtn.innerHTML = '<i class="fas fa-file-import"></i> Import';
-        carsImportBtn.style.marginTop = '15px';
-        
-        // Card management elements
-        const addCardBtn = document.createElement('button');
-        addCardBtn.className = 'btn btn-primary';
-        addCardBtn.innerHTML = '<i class="fas fa-plus"></i> Add Card';
-        addCardBtn.style.marginTop = '15px';
-        
-        const cardsStatusFilter = document.getElementById('cards-status-filter');
-        const cardsImportBtn = document.createElement('button');
-        cardsImportBtn.className = 'btn btn-outline';
-        cardsImportBtn.innerHTML = '<i class="fas fa-file-import"></i> Import';
-        cardsImportBtn.style.marginTop = '15px';
-        
         // Tab elements
         const tabs = document.querySelectorAll('.tab');
         const tabContents = document.querySelectorAll('.tab-content');
@@ -64,14 +40,20 @@ document.addEventListener('DOMContentLoaded', function() {
             // Tab switching
             tabs.forEach(tab => {
                 tab.addEventListener('click', () => {
-                    tabs.forEach(t => t.classList.remove('active'));
-                    tab.classList.add('active');
+                    tabs.forEach(t => {
+                        t.style.backgroundColor = '#f7fafc';
+                        t.style.color = '#2d3748';
+                        t.style.fontWeight = 'normal';
+                    });
+                    tab.style.backgroundColor = '#e53e3e';
+                    tab.style.color = 'white';
+                    tab.style.fontWeight = '600';
                     
                     const tabName = tab.getAttribute('data-tab');
                     tabContents.forEach(content => {
-                        content.classList.remove('active');
+                        content.style.display = 'none';
                         if (content.id === `${tabName}-tab`) {
-                            content.classList.add('active');
+                            content.style.display = 'block';
                             
                             // Load data for the active tab
                             if (tabName === 'drivers') {
@@ -166,64 +148,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
             
-            // Add car button
-            const carsTab = document.getElementById('cars-tab');
-            if (carsTab && !document.getElementById('add-car-btn')) {
-                const header = carsTab.querySelector('.table-header');
-                if (header) {
-                    const actions = header.querySelector('.action-buttons');
-                    if (actions) {
-                        actions.appendChild(addCarBtn);
-                        actions.appendChild(carsImportBtn);
-                    }
-                }
-            }
-            
-            // Add car button event listener
-            addCarBtn.addEventListener('click', () => {
-                currentCar = null;
-                document.getElementById('car-form-title').textContent = 'Add New Car';
-                resetCarForm();
-                document.getElementById('car-form-modal').style.display = 'block';
-            });
-            
-            // Status filter for cars
-            if (carsStatusFilter) {
-                carsStatusFilter.addEventListener('change', filterCars);
-            }
-            
-            // Import button for cars
-            carsImportBtn.addEventListener('click', handleCarsImport);
-            
-            // Add card button
-            const cardsTab = document.getElementById('cards-tab');
-            if (cardsTab && !document.getElementById('add-card-btn')) {
-                const header = cardsTab.querySelector('.table-header');
-                if (header) {
-                    const actions = header.querySelector('.action-buttons');
-                    if (actions) {
-                        actions.appendChild(addCardBtn);
-                        actions.appendChild(cardsImportBtn);
-                    }
-                }
-            }
-            
-            // Add card button event listener
-            addCardBtn.addEventListener('click', () => {
-                currentCard = null;
-                document.getElementById('card-form-title').textContent = 'Add New Card';
-                resetCardForm();
-                document.getElementById('card-form-modal').style.display = 'block';
-            });
-            
-            // Status filter for cards
-            if (cardsStatusFilter) {
-                cardsStatusFilter.addEventListener('change', filterCards);
-            }
-            
-            // Import button for cards
-            cardsImportBtn.addEventListener('click', handleCardsImport);
-            
             // Save car button
             document.querySelector('.save-car-btn').addEventListener('click', saveCar);
             
@@ -290,11 +214,11 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 // Show loading state
                 driversList.innerHTML = `
-                    <div class="view-placeholder">
-                        <div class="loading-indicator">
-                            <span></span>
-                            <span></span>
-                            <span></span>
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; color: #718096;">
+                        <div style="display: flex; justify-content: center; align-items: center; height: 40px; margin-bottom: 15px;">
+                            <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background-color: #e53e3e; margin: 0 4px; animation: loading 1.4s infinite ease-in-out both;"></span>
+                            <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background-color: #e53e3e; margin: 0 4px; animation: loading 1.4s infinite ease-in-out both; animation-delay: 0.2s;"></span>
+                            <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background-color: #e53e3e; margin: 0 4px; animation: loading 1.4s infinite ease-in-out both; animation-delay: 0.4s;"></span>
                         </div>
                         <p>Loading drivers data...</p>
                     </div>
@@ -306,7 +230,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Render data
                 renderDrivers(drivers);
                 
-                console.log(`Successfully loaded ${drivers.length} drivers from GitHub`);
+                console.log(\`Successfully loaded \${drivers.length} drivers from GitHub\`);
             } catch (error) {
                 console.error('Error loading drivers:', error);
                 showErrorMessage(driversList, error);
@@ -320,10 +244,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (drivers.length === 0) {
                 driversList.innerHTML = `
-                    <div class="view-placeholder">
-                        <i class="fas fa-user-friends" style="font-size: 48px; color: var(--medium-gray); margin-bottom: 15px;"></i>
-                        <h3>No Drivers Found</h3>
-                        <p>Get started by adding your first driver</p>
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; color: #718096;">
+                        <i class="fas fa-user-friends" style="font-size: 48px; color: #718096; margin-bottom: 15px;"></i>
+                        <h3 style="font-size: 22px; color: #2d3748; margin-bottom: 15px;">No Drivers Found</h3>
+                        <p style="font-size: 18px; color: #4a5568; margin-bottom: 25px; max-width: 500px; text-align: center;">Get started by adding your first driver</p>
                     </div>
                 `;
                 return;
@@ -343,50 +267,74 @@ document.addEventListener('DOMContentLoaded', function() {
             const driverSlip = document.createElement('div');
             driverSlip.className = 'driver-slip';
             driverSlip.dataset.id = driver.id;
+            driverSlip.style.backgroundColor = 'white';
+            driverSlip.style.border = '1px solid #e2e8f0';
+            driverSlip.style.borderRadius = '8px';
+            driverSlip.style.padding = '15px';
+            driverSlip.style.marginBottom = '15px';
+            driverSlip.style.cursor = 'pointer';
+            driverSlip.style.transition = 'all 0.3s ease';
+            driverSlip.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+            
+            // Add hover effect
+            driverSlip.onmouseover = function() {
+                this.style.transform = 'translateY(-2px)';
+                this.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+                this.style.borderColor = '#e53e3e';
+            };
+            driverSlip.onmouseout = function() {
+                this.style.transform = '';
+                this.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+                this.style.borderColor = '#e2e8f0';
+            };
             
             // Determine status class
-            let statusClass, statusText;
+            let statusBg, statusColor, statusText;
             switch(driver.status) {
                 case 'available':
-                    statusClass = 'status-available';
+                    statusBg = 'rgba(56, 161, 105, 0.15)';
+                    statusColor = '#38a169';
                     statusText = 'Available';
                     break;
                 case 'on-duty':
-                    statusClass = 'status-pending';
+                    statusBg = 'rgba(221, 107, 32, 0.15)';
+                    statusColor = '#dd6b20';
                     statusText = 'On Duty';
                     break;
                 case 'maintenance':
-                    statusClass = 'status-cancelled';
+                    statusBg = 'rgba(197, 48, 48, 0.15)';
+                    statusColor = '#c53030';
                     statusText = 'Maintenance';
                     break;
                 default:
-                    statusClass = 'status-available';
+                    statusBg = 'rgba(56, 161, 105, 0.15)';
+                    statusColor = '#38a169';
                     statusText = 'Available';
             }
             
             driverSlip.innerHTML = `
-                <div class="driver-header">
-                    <div class="driver-name">${driver.firstName} ${driver.lastName}</div>
-                    <div class="driver-status ${statusClass}">${statusText}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                    <div style="font-weight: 600; font-size: 18px; color: #2d3748;">\${driver.firstName} \${driver.lastName}</div>
+                    <div style="padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; background-color: \${statusBg}; color: \${statusColor};">\${statusText}</div>
                 </div>
-                <div class="driver-details">
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px;">
                     <div>
-                        <span class="detail-label">License:</span> ${driver.license}
+                        <span style="font-weight: 600; color: #2d3748; margin-right: 5px;">License:</span> \${driver.license}
                     </div>
                     <div>
-                        <span class="detail-label">Experience:</span> ${driver.experience || 'N/A'}
+                        <span style="font-weight: 600; color: #2d3748; margin-right: 5px;">Experience:</span> \${driver.experience || 'N/A'}
                     </div>
                     <div>
-                        <span class="detail-label">Assigned Car:</span> ${driver.car || 'Unassigned'}
+                        <span style="font-weight: 600; color: #2d3748; margin-right: 5px;">Assigned Car:</span> \${driver.car || 'Unassigned'}
                     </div>
                     <div>
-                        <span class="detail-label">Assigned Card:</span> ${driver.card || 'Unassigned'}
+                        <span style="font-weight: 600; color: #2d3748; margin-right: 5px;">Assigned Card:</span> \${driver.card || 'Unassigned'}
                     </div>
                     <div>
-                        <span class="detail-label">Tenders:</span> ${driver.tenders || '0 (0 active)'}
+                        <span style="font-weight: 600; color: #2d3748; margin-right: 5px;">Tenders:</span> \${driver.tenders || '0 (0 active)'}
                     </div>
                     <div>
-                        <span class="detail-label">Last Delivery:</span> ${driver.lastDelivery || 'Never'}
+                        <span style="font-weight: 600; color: #2d3748; margin-right: 5px;">Last Delivery:</span> \${driver.lastDelivery || 'Never'}
                     </div>
                 </div>
             `;
@@ -415,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const tendersElement = document.getElementById('driver-detail-tenders');
             
             // Set driver details
-            nameElement.textContent = `${driver.firstName} ${driver.lastName}`;
+            nameElement.textContent = \`\${driver.firstName} \${driver.lastName}\`;
             statusElement.textContent = driver.status.charAt(0).toUpperCase() + driver.status.slice(1);
             licenseElement.textContent = driver.license;
             experienceElement.textContent = driver.experience || 'N/A';
@@ -424,16 +372,20 @@ document.addEventListener('DOMContentLoaded', function() {
             cardElement.textContent = driver.card || 'Unassigned';
             
             // Set status class
-            statusElement.className = 'driver-status';
+            statusElement.style.backgroundColor = '';
+            statusElement.style.color = '';
             switch(driver.status) {
                 case 'available':
-                    statusElement.classList.add('status-available');
+                    statusElement.style.backgroundColor = 'rgba(56, 161, 105, 0.15)';
+                    statusElement.style.color = '#38a169';
                     break;
                 case 'on-duty':
-                    statusElement.classList.add('status-pending');
+                    statusElement.style.backgroundColor = 'rgba(221, 107, 32, 0.15)';
+                    statusElement.style.color = '#dd6b20';
                     break;
                 case 'maintenance':
-                    statusElement.classList.add('status-cancelled');
+                    statusElement.style.backgroundColor = 'rgba(197, 48, 48, 0.15)';
+                    statusElement.style.color = '#c53030';
                     break;
             }
             
@@ -449,7 +401,7 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 const tenders = await githubService.getFileContent('tenders.json');
                 const driverTenders = tenders.filter(t => 
-                    t.driver && t.driver.toLowerCase() === `${driver.firstName} ${driver.lastName}`.toLowerCase()
+                    t.driver && t.driver.toLowerCase() === \`\${driver.firstName} \${driver.lastName}\`.toLowerCase()
                 );
                 
                 if (driverTenders.length === 0) {
@@ -461,49 +413,59 @@ document.addEventListener('DOMContentLoaded', function() {
                 driverTenders.forEach(tender => {
                     const tenderItem = document.createElement('div');
                     tenderItem.className = 'tender-item';
+                    tenderItem.style.backgroundColor = 'white';
+                    tenderItem.style.border = '1px solid #e2e8f0';
+                    tenderItem.style.borderRadius = '8px';
+                    tenderItem.style.padding = '10px';
                     
                     // Determine status class
-                    let statusClass, statusText;
+                    let statusBg, statusColor, statusText;
                     switch(tender.status) {
                         case 'available':
-                            statusClass = 'status-available';
+                            statusBg = 'rgba(56, 161, 105, 0.15)';
+                            statusColor = '#38a169';
                             statusText = 'Available';
                             break;
                         case 'pending':
-                            statusClass = 'status-pending';
+                            statusBg = 'rgba(221, 107, 32, 0.15)';
+                            statusColor = '#dd6b20';
                             statusText = 'Pending';
                             break;
                         case 'delivered':
-                            statusClass = 'status-delivered';
+                            statusBg = 'rgba(49, 130, 206, 0.15)';
+                            statusColor = '#3182ce';
                             statusText = 'Delivered';
                             break;
                         case 'cancelled':
-                            statusClass = 'status-cancelled';
+                            statusBg = 'rgba(197, 48, 48, 0.15)';
+                            statusColor = '#c53030';
                             statusText = 'Cancelled';
                             break;
                         case 'sold':
-                            statusClass = 'status-sold';
+                            statusBg = 'rgba(128, 90, 213, 0.15)';
+                            statusColor = '#805ad5';
                             statusText = 'Sold';
                             break;
                         default:
-                            statusClass = 'status-available';
+                            statusBg = 'rgba(56, 161, 105, 0.15)';
+                            statusColor = '#38a169';
                             statusText = 'Available';
                     }
                     
-                    tenderItem.innerHTML = `
+                    tenderItem.innerHTML = \`
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div>
-                                <strong>#${tender.id}</strong> - ${tender.route}
+                                <strong>#\${tender.id}</strong> - \${tender.route}
                             </div>
-                            <span class="status-badge ${statusClass}">${statusText}</span>
+                            <span style="padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; background-color: \${statusBg}; color: \${statusColor};">\${statusText}</span>
                         </div>
-                        <div style="margin-top: 5px; font-size: 14px; color: var(--medium-gray);">
-                            ${tender.loadingDate} → ${tender.unloadingDate}
+                        <div style="margin-top: 5px; font-size: 14px; color: #718096;">
+                            \${tender.loadingDate} → \${tender.unloadingDate}
                         </div>
                         <div style="margin-top: 5px; font-weight: 600;">
-                            ${tender.price}
+                            \${tender.price}
                         </div>
-                    `;
+                    \`;
                     
                     container.appendChild(tenderItem);
                 });
@@ -589,10 +551,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadDriversData();
                 
                 // Show success message
-                alert(`Driver ${firstName} ${lastName} ${currentDriver ? 'updated' : 'added'} successfully!`);
+                alert(\`Driver \${firstName} \${lastName} \${currentDriver ? 'updated' : 'added'} successfully!\`);
             } catch (error) {
                 console.error('Error saving driver:', error);
-                alert(`Failed to save driver: ${error.message}`);
+                alert(\`Failed to save driver: \${error.message}\`);
             }
         }
         
@@ -600,7 +562,7 @@ document.addEventListener('DOMContentLoaded', function() {
         async function deleteDriver() {
             if (!currentDriver) return;
             
-            if (!confirm(`Are you sure you want to delete ${currentDriver.firstName} ${currentDriver.lastName}?`)) {
+            if (!confirm(\`Are you sure you want to delete \${currentDriver.firstName} \${currentDriver.lastName}?\`)) {
                 return;
             }
             
@@ -621,10 +583,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadDriversData();
                 
                 // Show success message
-                alert(`Driver ${currentDriver.firstName} ${currentDriver.lastName} deleted successfully!`);
+                alert(\`Driver \${currentDriver.firstName} \${currentDriver.lastName} deleted successfully!\`);
             } catch (error) {
                 console.error('Error deleting driver:', error);
-                alert(`Failed to delete driver: ${error.message}`);
+                alert(\`Failed to delete driver: \${error.message}\`);
             }
         }
         
@@ -635,7 +597,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const driverSlips = document.querySelectorAll('.driver-slip');
             driverSlips.forEach(slip => {
-                if (filterValue === 'all' || slip.querySelector('.driver-status').textContent.toLowerCase().includes(filterValue)) {
+                const statusText = slip.querySelector('[style*="color"]')?.textContent.toLowerCase() || '';
+                
+                if (filterValue === 'all' || statusText.includes(filterValue)) {
                     slip.style.display = 'block';
                 } else {
                     slip.style.display = 'none';
@@ -669,22 +633,39 @@ document.addEventListener('DOMContentLoaded', function() {
                         carItem.className = 'assignment-item';
                         carItem.dataset.id = car.id;
                         carItem.dataset.type = 'car';
+                        carItem.style.backgroundColor = 'white';
+                        carItem.style.border = '1px solid #e2e8f0';
+                        carItem.style.borderRadius = '8px';
+                        carItem.style.padding = '10px';
+                        carItem.style.marginBottom = '10px';
+                        carItem.style.cursor = 'pointer';
+                        carItem.style.transition = 'all 0.3s ease';
                         
                         // Check if this car is already assigned to the current driver
                         if (currentDriver && currentDriver.car === car.tractorPlate) {
-                            carItem.classList.add('selected');
+                            carItem.style.backgroundColor = '#e53e3e';
+                            carItem.style.color = 'white';
+                            carItem.style.borderColor = '#c53030';
                         }
                         
-                        carItem.innerHTML = `
-                            <strong>${car.tractorPlate}</strong> - ${car.trailerPlate}
-                            <div style="font-size: 12px; color: var(--medium-gray); margin-top: 3px;">
-                                ${car.maxWeight} | ${car.loadingSpace}
+                        carItem.innerHTML = \`
+                            <strong>\${car.tractorPlate}</strong> - \${car.trailerPlate}
+                            <div style="font-size: 12px; color: #718096; margin-top: 3px;">
+                                \${car.maxWeight} | \${car.loadingSpace}
                             </div>
-                        `;
+                        \`;
                         
                         // Add click handler
                         carItem.addEventListener('click', () => {
-                            carItem.classList.toggle('selected');
+                            if (carItem.style.backgroundColor === 'white') {
+                                carItem.style.backgroundColor = '#e53e3e';
+                                carItem.style.color = 'white';
+                                carItem.style.borderColor = '#c53030';
+                            } else {
+                                carItem.style.backgroundColor = 'white';
+                                carItem.style.color = '#2d3748';
+                                carItem.style.borderColor = '#e2e8f0';
+                            }
                         });
                         
                         availableCars.appendChild(carItem);
@@ -704,22 +685,39 @@ document.addEventListener('DOMContentLoaded', function() {
                         cardItem.className = 'assignment-item';
                         cardItem.dataset.id = card.id;
                         cardItem.dataset.type = 'card';
+                        cardItem.style.backgroundColor = 'white';
+                        cardItem.style.border = '1px solid #e2e8f0';
+                        cardItem.style.borderRadius = '8px';
+                        cardItem.style.padding = '10px';
+                        cardItem.style.marginBottom = '10px';
+                        cardItem.style.cursor = 'pointer';
+                        cardItem.style.transition = 'all 0.3s ease';
                         
                         // Check if this card is already assigned to the current driver
                         if (currentDriver && currentDriver.card === card.number) {
-                            cardItem.classList.add('selected');
+                            cardItem.style.backgroundColor = '#e53e3e';
+                            cardItem.style.color = 'white';
+                            cardItem.style.borderColor = '#c53030';
                         }
                         
-                        cardItem.innerHTML = `
-                            <strong>${card.number}</strong> - ${card.expiry}
-                            <div style="font-size: 12px; color: var(--medium-gray); margin-top: 3px;">
-                                PIN: ${card.pin}
+                        cardItem.innerHTML = \`
+                            <strong>\${card.number}</strong> - \${card.expiry}
+                            <div style="font-size: 12px; color: #718096; margin-top: 3px;">
+                                PIN: \${card.pin}
                             </div>
-                        `;
+                        \`;
                         
                         // Add click handler
                         cardItem.addEventListener('click', () => {
-                            cardItem.classList.toggle('selected');
+                            if (cardItem.style.backgroundColor === 'white') {
+                                cardItem.style.backgroundColor = '#e53e3e';
+                                cardItem.style.color = 'white';
+                                cardItem.style.borderColor = '#c53030';
+                            } else {
+                                cardItem.style.backgroundColor = 'white';
+                                cardItem.style.color = '#2d3748';
+                                cardItem.style.borderColor = '#e2e8f0';
+                            }
                         });
                         
                         availableCards.appendChild(cardItem);
@@ -738,8 +736,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             try {
                 // Get selected resources
-                const selectedCars = document.querySelectorAll('#available-cars .assignment-item.selected');
-                const selectedCards = document.querySelectorAll('#available-cards .assignment-item.selected');
+                const selectedCars = document.querySelectorAll('#available-cars [style*="background-color: rgb(229, 62, 62)"]');
+                const selectedCards = document.querySelectorAll('#available-cards [style*="background-color: rgb(229, 62, 62)"]');
                 
                 // Get existing data
                 const [drivers, cars, cards] = await Promise.all([
@@ -769,7 +767,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (selectedCars.length > 0) {
                         const carIndex = cars.findIndex(c => c.id == selectedCars[0].dataset.id);
                         if (carIndex !== -1) {
-                            cars[carIndex].driver = `${drivers[driverIndex].firstName} ${drivers[driverIndex].lastName}`;
+                            cars[carIndex].driver = \`\${drivers[driverIndex].firstName} \${drivers[driverIndex].lastName}\`;
                         }
                     }
                     
@@ -783,7 +781,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (selectedCards.length > 0) {
                         const cardIndex = cards.findIndex(c => c.id == selectedCards[0].dataset.id);
                         if (cardIndex !== -1) {
-                            cards[cardIndex].assignedTo = `${drivers[driverIndex].firstName} ${drivers[driverIndex].lastName}`;
+                            cards[cardIndex].assignedTo = \`\${drivers[driverIndex].firstName} \${drivers[driverIndex].lastName}\`;
                         }
                     }
                 }
@@ -805,18 +803,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('Resource assignment updated successfully!');
             } catch (error) {
                 console.error('Error saving resource assignment:', error);
-                alert(`Failed to save resource assignment: ${error.message}`);
+                alert(\`Failed to save resource assignment: \${error.message}\`);
             }
         }
         
         // Show error message
         function showErrorMessage(container, error) {
             container.innerHTML = `
-                <div class="error-message">
-                    <h3>Error Loading Data</h3>
-                    <p>${error.message}</p>
+                <div style="padding: 20px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); margin: 20px 0; text-align: center;">
+                    <h3 style="color: #c53030; margin-bottom: 10px;">Error Loading Data</h3>
+                    <p style="color: #2d3748; margin-bottom: 15px;">\${error.message}</p>
                     <div style="margin-top: 15px;">
-                        <button class="btn btn-primary" onclick="loadDriversData()">Retry</button>
+                        <button class="btn btn-primary" style="background-color: #e53e3e; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600;" onclick="loadDriversData()">Retry</button>
                     </div>
                 </div>
             `;
@@ -830,11 +828,11 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 // Show loading state
                 carsList.innerHTML = `
-                    <div class="view-placeholder">
-                        <div class="loading-indicator">
-                            <span></span>
-                            <span></span>
-                            <span></span>
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; color: #718096;">
+                        <div style="display: flex; justify-content: center; align-items: center; height: 40px; margin-bottom: 15px;">
+                            <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background-color: #e53e3e; margin: 0 4px; animation: loading 1.4s infinite ease-in-out both;"></span>
+                            <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background-color: #e53e3e; margin: 0 4px; animation: loading 1.4s infinite ease-in-out both; animation-delay: 0.2s;"></span>
+                            <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background-color: #e53e3e; margin: 0 4px; animation: loading 1.4s infinite ease-in-out both; animation-delay: 0.4s;"></span>
                         </div>
                         <p>Loading cars data...</p>
                     </div>
@@ -846,7 +844,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Render data
                 renderCars(cars);
                 
-                console.log(`Successfully loaded ${cars.length} cars from GitHub`);
+                console.log(\`Successfully loaded \${cars.length} cars from GitHub\`);
             } catch (error) {
                 console.error('Error loading cars:', error);
                 showErrorMessage(carsList, error);
@@ -860,10 +858,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (cars.length === 0) {
                 carsList.innerHTML = `
-                    <div class="view-placeholder">
-                        <i class="fas fa-truck" style="font-size: 48px; color: var(--medium-gray); margin-bottom: 15px;"></i>
-                        <h3>No Cars Found</h3>
-                        <p>Get started by adding your first car</p>
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; color: #718096;">
+                        <i class="fas fa-truck" style="font-size: 48px; color: #718096; margin-bottom: 15px;"></i>
+                        <h3 style="font-size: 22px; color: #2d3748; margin-bottom: 15px;">No Cars Found</h3>
+                        <p style="font-size: 18px; color: #4a5568; margin-bottom: 25px; max-width: 500px; text-align: center;">Get started by adding your first car</p>
                     </div>
                 `;
                 return;
@@ -881,52 +879,76 @@ document.addEventListener('DOMContentLoaded', function() {
         // Render a single car
         function renderCar(car, container) {
             const carSlip = document.createElement('div');
-            carSlip.className = 'driver-slip'; // Reusing the same class for consistency
+            carSlip.className = 'driver-slip';
             carSlip.dataset.id = car.id;
+            carSlip.style.backgroundColor = 'white';
+            carSlip.style.border = '1px solid #e2e8f0';
+            carSlip.style.borderRadius = '8px';
+            carSlip.style.padding = '15px';
+            carSlip.style.marginBottom = '15px';
+            carSlip.style.cursor = 'pointer';
+            carSlip.style.transition = 'all 0.3s ease';
+            carSlip.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+            
+            // Add hover effect
+            carSlip.onmouseover = function() {
+                this.style.transform = 'translateY(-2px)';
+                this.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+                this.style.borderColor = '#e53e3e';
+            };
+            carSlip.onmouseout = function() {
+                this.style.transform = '';
+                this.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+                this.style.borderColor = '#e2e8f0';
+            };
             
             // Determine status class
-            let statusClass, statusText;
+            let statusBg, statusColor, statusText;
             switch(car.status) {
                 case 'available':
-                    statusClass = 'status-available';
+                    statusBg = 'rgba(56, 161, 105, 0.15)';
+                    statusColor = '#38a169';
                     statusText = 'Available';
                     break;
                 case 'in-use':
-                    statusClass = 'status-pending';
+                    statusBg = 'rgba(221, 107, 32, 0.15)';
+                    statusColor = '#dd6b20';
                     statusText = 'In Use';
                     break;
                 case 'maintenance':
-                    statusClass = 'status-cancelled';
+                    statusBg = 'rgba(197, 48, 48, 0.15)';
+                    statusColor = '#c53030';
                     statusText = 'Maintenance';
                     break;
                 default:
-                    statusClass = 'status-available';
+                    statusBg = 'rgba(56, 161, 105, 0.15)';
+                    statusColor = '#38a169';
                     statusText = 'Available';
             }
             
             carSlip.innerHTML = `
-                <div class="driver-header">
-                    <div class="driver-name">${car.tractorPlate}</div>
-                    <div class="driver-status ${statusClass}">${statusText}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                    <div style="font-weight: 600; font-size: 18px; color: #2d3748;">\${car.tractorPlate}</div>
+                    <div style="padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; background-color: \${statusBg}; color: \${statusColor};">\${statusText}</div>
                 </div>
-                <div class="driver-details">
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px;">
                     <div>
-                        <span class="detail-label">Trailer:</span> ${car.trailerPlate}
+                        <span style="font-weight: 600; color: #2d3748; margin-right: 5px;">Trailer:</span> \${car.trailerPlate}
                     </div>
                     <div>
-                        <span class="detail-label">Max Weight:</span> ${car.maxWeight}
+                        <span style="font-weight: 600; color: #2d3748; margin-right: 5px;">Max Weight:</span> \${car.maxWeight}
                     </div>
                     <div>
-                        <span class="detail-label">Loading Space:</span> ${car.loadingSpace}
+                        <span style="font-weight: 600; color: #2d3748; margin-right: 5px;">Loading Space:</span> \${car.loadingSpace}
                     </div>
                     <div>
-                        <span class="detail-label">Insurance:</span> ${car.insurance}
+                        <span style="font-weight: 600; color: #2d3748; margin-right: 5px;">Insurance:</span> \${car.insurance}
                     </div>
                     <div>
-                        <span class="detail-label">Inspection:</span> ${car.inspection}
+                        <span style="font-weight: 600; color: #2d3748; margin-right: 5px;">Inspection:</span> \${car.inspection}
                     </div>
                     <div>
-                        <span class="detail-label">Driver:</span> ${car.driver || 'Unassigned'}
+                        <span style="font-weight: 600; color: #2d3748; margin-right: 5px;">Driver:</span> \${car.driver || 'Unassigned'}
                     </div>
                 </div>
             `;
@@ -982,7 +1004,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!loadingSpace) return;
             
             // Extract dimensions (assuming format like "13.6m x 2.45m x 2.7m")
-            const dimensions = loadingSpace.match(/(\d+\.?\d*)/g);
+            const dimensions = loadingSpace.match(/(\\d+\\.?\\d*)/g);
             if (dimensions && dimensions.length >= 3) {
                 const length = parseFloat(dimensions[0]);
                 const width = parseFloat(dimensions[1]);
@@ -1049,10 +1071,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadCarsData();
                 
                 // Show success message
-                alert(`Car ${tractorPlate} ${currentCar ? 'updated' : 'added'} successfully!`);
+                alert(\`Car \${tractorPlate} \${currentCar ? 'updated' : 'added'} successfully!\`);
             } catch (error) {
                 console.error('Error saving car:', error);
-                alert(`Failed to save car: ${error.message}`);
+                alert(\`Failed to save car: \${error.message}\`);
             }
         }
         
@@ -1063,7 +1085,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const carSlips = document.querySelectorAll('#cars-list .driver-slip');
             carSlips.forEach(slip => {
-                const statusText = slip.querySelector('.driver-status').textContent.toLowerCase();
+                const statusText = slip.querySelector('[style*="color"]')?.textContent.toLowerCase() || '';
                 
                 if (filterValue === 'all' || statusText.includes(filterValue)) {
                     slip.style.display = 'block';
@@ -1086,11 +1108,11 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 // Show loading state
                 cardsList.innerHTML = `
-                    <div class="view-placeholder">
-                        <div class="loading-indicator">
-                            <span></span>
-                            <span></span>
-                            <span></span>
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; color: #718096;">
+                        <div style="display: flex; justify-content: center; align-items: center; height: 40px; margin-bottom: 15px;">
+                            <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background-color: #e53e3e; margin: 0 4px; animation: loading 1.4s infinite ease-in-out both;"></span>
+                            <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background-color: #e53e3e; margin: 0 4px; animation: loading 1.4s infinite ease-in-out both; animation-delay: 0.2s;"></span>
+                            <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background-color: #e53e3e; margin: 0 4px; animation: loading 1.4s infinite ease-in-out both; animation-delay: 0.4s;"></span>
                         </div>
                         <p>Loading cards data...</p>
                     </div>
@@ -1102,7 +1124,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Render data
                 renderCards(cards);
                 
-                console.log(`Successfully loaded ${cards.length} cards from GitHub`);
+                console.log(\`Successfully loaded \${cards.length} cards from GitHub\`);
             } catch (error) {
                 console.error('Error loading cards:', error);
                 showErrorMessage(cardsList, error);
@@ -1116,10 +1138,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (cards.length === 0) {
                 cardsList.innerHTML = `
-                    <div class="view-placeholder">
-                        <i class="fas fa-credit-card" style="font-size: 48px; color: var(--medium-gray); margin-bottom: 15px;"></i>
-                        <h3>No Cards Found</h3>
-                        <p>Get started by adding your first card</p>
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; color: #718096;">
+                        <i class="fas fa-credit-card" style="font-size: 48px; color: #718096; margin-bottom: 15px;"></i>
+                        <h3 style="font-size: 22px; color: #2d3748; margin-bottom: 15px;">No Cards Found</h3>
+                        <p style="font-size: 18px; color: #4a5568; margin-bottom: 25px; max-width: 500px; text-align: center;">Get started by adding your first card</p>
                     </div>
                 `;
                 return;
@@ -1137,48 +1159,71 @@ document.addEventListener('DOMContentLoaded', function() {
         // Render a single card
         function renderCard(card, container) {
             const cardSlip = document.createElement('div');
-            cardSlip.className = 'driver-slip'; // Reusing the same class for consistency
+            cardSlip.className = 'driver-slip';
             cardSlip.dataset.id = card.id;
+            cardSlip.style.backgroundColor = 'white';
+            cardSlip.style.border = '1px solid #e2e8f0';
+            cardSlip.style.borderRadius = '8px';
+            cardSlip.style.padding = '15px';
+            cardSlip.style.marginBottom = '15px';
+            cardSlip.style.cursor = 'pointer';
+            cardSlip.style.transition = 'all 0.3s ease';
+            cardSlip.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+            
+            // Add hover effect
+            cardSlip.onmouseover = function() {
+                this.style.transform = 'translateY(-2px)';
+                this.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+                this.style.borderColor = '#e53e3e';
+            };
+            cardSlip.onmouseout = function() {
+                this.style.transform = '';
+                this.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+                this.style.borderColor = '#e2e8f0';
+            };
             
             // Determine status class
-            let statusClass, statusText;
+            let statusBg, statusColor, statusText;
             switch(card.status) {
                 case 'active':
-                    statusClass = 'status-available';
+                    statusBg = 'rgba(56, 161, 105, 0.15)';
+                    statusColor = '#38a169';
                     statusText = 'Active';
                     break;
                 case 'expired':
-                    statusClass = 'status-cancelled';
+                    statusBg = 'rgba(197, 48, 48, 0.15)';
+                    statusColor = '#c53030';
                     statusText = 'Expired';
                     break;
                 default:
-                    statusClass = 'status-available';
+                    statusBg = 'rgba(56, 161, 105, 0.15)';
+                    statusColor = '#38a169';
                     statusText = 'Active';
             }
             
             cardSlip.innerHTML = `
-                <div class="driver-header">
-                    <div class="driver-name">${card.number}</div>
-                    <div class="driver-status ${statusClass}">${statusText}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                    <div style="font-weight: 600; font-size: 18px; color: #2d3748;">\${card.number}</div>
+                    <div style="padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; background-color: \${statusBg}; color: \${statusColor};">\${statusText}</div>
                 </div>
-                <div class="driver-details">
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px;">
                     <div>
-                        <span class="detail-label">PIN:</span> ${card.pin}
+                        <span style="font-weight: 600; color: #2d3748; margin-right: 5px;">PIN:</span> \${card.pin}
                     </div>
                     <div>
-                        <span class="detail-label">Expiry:</span> ${card.expiry}
+                        <span style="font-weight: 600; color: #2d3748; margin-right: 5px;">Expiry:</span> \${card.expiry}
                     </div>
                     <div>
-                        <span class="detail-label">Type:</span> ${card.type}
+                        <span style="font-weight: 600; color: #2d3748; margin-right: 5px;">Type:</span> \${card.type}
                     </div>
                     <div>
-                        <span class="detail-label">Assigned To:</span> ${card.assignedTo || 'Unassigned'}
+                        <span style="font-weight: 600; color: #2d3748; margin-right: 5px;">Assigned To:</span> \${card.assignedTo || 'Unassigned'}
                     </div>
                     <div>
-                        <span class="detail-label">Notify Before:</span> ${card.notifyBefore} days
+                        <span style="font-weight: 600; color: #2d3748; margin-right: 5px;">Notify Before:</span> \${card.notifyBefore} days
                     </div>
                     <div>
-                        <span class="detail-label">Reminder Freq:</span> ${card.reminderFreq} days
+                        <span style="font-weight: 600; color: #2d3748; margin-right: 5px;">Reminder Freq:</span> \${card.reminderFreq} days
                     </div>
                 </div>
             `;
@@ -1267,10 +1312,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadCardsData();
                 
                 // Show success message
-                alert(`Card **** ${number.slice(-4)} ${currentCard ? 'updated' : 'added'} successfully!`);
+                alert(\`Card **** \${number.slice(-4)} \${currentCard ? 'updated' : 'added'} successfully!\`);
             } catch (error) {
                 console.error('Error saving card:', error);
-                alert(`Failed to save card: ${error.message}`);
+                alert(\`Failed to save card: \${error.message}\`);
             }
         }
         
@@ -1281,7 +1326,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const cardSlips = document.querySelectorAll('#cards-list .driver-slip');
             cardSlips.forEach(slip => {
-                const statusText = slip.querySelector('.driver-status').textContent.toLowerCase();
+                const statusText = slip.querySelector('[style*="color"]')?.textContent.toLowerCase() || '';
                 
                 if (filterValue === 'all' || statusText.includes(filterValue)) {
                     slip.style.display = 'block';
